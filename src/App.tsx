@@ -635,7 +635,7 @@ function SkillPill({ name }: { name: string }) {
       {showTooltip && details && (
         <AnimatePresence>
           <motion.div
-            className="absolute bottom-full left-0 mb-2 px-3 py-2 rounded-xl bg-slate-50 border border-emerald-200 shadow-sm shadow-emerald-100 z-50 whitespace-nowrap"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-xl bg-slate-50 border border-emerald-200 shadow-sm shadow-emerald-100 z-50 whitespace-nowrap max-w-[80vw]"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
@@ -653,7 +653,7 @@ function SkillPill({ name }: { name: string }) {
                 {details.experience}
               </span>
             </div>
-            <div className="absolute bottom-[-5px] left-4 w-2.5 h-2.5 bg-slate-50 border-r border-b border-emerald-200 rotate-45" />
+            <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-50 border-r border-b border-emerald-200 rotate-45" />
           </motion.div>
         </AnimatePresence>
       )}
