@@ -1133,16 +1133,16 @@ function Projects() {
    Clean footer with social links.
    ──────────────────────────────────────────── */
 const socials = [
-  { label: "GitHub", href: "https://github.com/peterisaac", icon: "GH" },
+  { label: "GitHub", href: "https://github.com/peterisaac-00", icon: "GH" },
   {
     label: "LinkedIn",
-    href: "https://linkedin.com/in/peterisaac",
+    href: "https://www.linkedin.com/in/peter-isaac-138623332/",
     icon: "LI",
   },
-  { label: "Email", href: "mailto:peter@isaac.dev", icon: "@" },
+  { label: "Email", href: "mailto:lunagleam1@gmail.com", icon: "@" },
   {
     label: "Twitter / X",
-    href: "https://x.com/peterisaac",
+    href: "https://x.com/peterisaac_0",
     icon: "X",
   },
 ];
