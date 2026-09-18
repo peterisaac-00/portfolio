@@ -635,22 +635,25 @@ function SkillPill({ name }: { name: string }) {
       {showTooltip && details && (
         <AnimatePresence>
           <motion.div
-            className="absolute bottom-full left-0 mb-2 px-3 py-2 rounded-xl bg-gray-900 border border-green-800/50 shadow-lg shadow-green-900/20 z-50 whitespace-nowrap"
+            className="absolute bottom-full left-0 mb-2 px-3 py-2 rounded-xl bg-slate-50 border border-emerald-200 shadow-sm shadow-emerald-100 z-50 whitespace-nowrap"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="text-xs font-mono text-green-300 font-semibold mb-1">
+            <div className="text-xs font-mono text-green-700 font-semibold mb-1">
               {name}
             </div>
-            <div className="text-[11px] font-mono text-gray-400">
+            <div className="text-[11px] font-mono text-slate-600">
               Used in: {details.usedIn.join(", ")}
             </div>
-            <div className="text-[11px] font-mono text-gray-400">
-              Experience: {details.experience}
+            <div className="text-[11px] font-mono text-slate-600">
+              Experience:{" "}
+              <span className="text-amber-600 font-semibold">
+                {details.experience}
+              </span>
             </div>
-            <div className="absolute bottom-[-6px] left-4 w-3 h-3 bg-gray-900 border-r border-b border-green-800/50 rotate-45" />
+            <div className="absolute bottom-[-5px] left-4 w-2.5 h-2.5 bg-slate-50 border-r border-b border-emerald-200 rotate-45" />
           </motion.div>
         </AnimatePresence>
       )}
