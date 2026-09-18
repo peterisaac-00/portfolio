@@ -1152,7 +1152,7 @@ function Contact() {
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section id="contact" ref={ref} className="py-28 bg-white">
+    <section id="contact" ref={ref} className="pt-28 pb-20 bg-white">
       <div className="max-w-5xl mx-auto px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -1195,20 +1195,81 @@ function Contact() {
             </motion.a>
           ))}
         </motion.div>
-
-        {/* Footer */}
-        <motion.div
-          className="mt-28 pt-8 border-t border-gray-100"
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 1, delay: 0.6 }}
-        >
-          <p className="text-xs font-mono text-gray-300">
-            {"/* © " + new Date().getFullYear() + " Peter Isaac. Crafted with passion. */"}
-          </p>
-        </motion.div>
       </div>
     </section>
+  );
+}
+
+/* ────────────────────────────────────────────
+   FOOTER
+   Calm closing — same dark-green gradient as Projects.
+   Logo + quick nav + socials, copyright centered below.
+   ──────────────────────────────────────────── */
+function Footer() {
+  const footerLinks = ["home", "about", "skills", "projects", "contact"];
+
+  return (
+    <motion.footer
+      className="bg-gradient-to-b from-emerald-950 to-emerald-900 text-white"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.9, ease: "easeOut" }}
+    >
+      <div className="max-w-5xl mx-auto px-6 py-12">
+        <p className="text-xs font-mono text-green-400 tracking-widest uppercase mb-8 text-center sm:text-left">
+          {"// footer"}
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-8">
+          {/* Logo — consistent with Navigation */}
+          <a href="#home" className="font-mono text-lg tracking-tight shrink-0">
+            <span className="text-green-400">{"<"}</span>
+            <span className="font-semibold text-white">Peter</span>
+            <span className="text-green-400">{" />"}</span>
+          </a>
+
+          {/* Quick nav */}
+          <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            {footerLinks.map((l) => (
+              <a
+                key={l}
+                href={`#${l}`}
+                className="text-xs font-mono text-gray-400 hover:text-green-300 transition-colors duration-300"
+              >
+                {l}
+              </a>
+            ))}
+          </nav>
+
+          {/* Socials — reuses the `socials` array above */}
+          <div className="flex items-center gap-3">
+            {socials.map((s) => (
+              <a
+                key={s.label}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                title={s.label}
+                className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-green-300 font-mono text-xs font-bold hover:bg-white/[0.12] hover:border-green-400/20 transition-all duration-300"
+              >
+                {s.icon}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom line — copyright moved out of Contact */}
+        <div className="mt-10 pt-6 border-t border-white/[0.06] text-center">
+          <p className="text-xs font-mono text-green-200/40">
+            {"/* © " +
+              new Date().getFullYear() +
+              " Peter Isaac. Crafted with passion. */"}
+          </p>
+        </div>
+      </div>
+    </motion.footer>
   );
 }
 
@@ -1224,6 +1285,7 @@ export default function App() {
       <Skills />
       <Projects />
       <Contact />
+      <Footer />
     </main>
   );
 }
