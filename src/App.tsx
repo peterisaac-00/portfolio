@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import {
   motion,
   useInView,
@@ -592,11 +592,36 @@ const skillDetails: Record<string, { usedIn: string[]; experience: string }> = {
 function SkillPill({ name }: { name: string }) {
   const details = skillDetails[name];
   const [showTooltip, setShowTooltip] = useState(false);
+  // Horizontal shift so a centered tooltip never paints past the viewport edges.
+  // Root cause: whitespace-nowrap + left-1/2 -translate-x-1/2 tooltips overflow on
+  // edge pills; html/body overflow-x:hidden then clips them (looks like the section is cut off).
+  const [shiftX, setShiftX] = useState(0);
+  const tipRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
+
+  useLayoutEffect(() => {
+    if (!showTooltip || !tipRef.current) {
+      setShiftX(0);
+      return;
+    }
+    const tip = tipRef.current;
+    const tipWidth = tip.offsetWidth;
+    const pill = tip.offsetParent as HTMLElement | null;
+    if (!pill) return;
+    const pillRect = pill.getBoundingClientRect();
+    const center = pillRect.left + pillRect.width / 2;
+    const pad = 12;
+    const half = tipWidth / 2;
+    let dx = 0;
+    if (center - half < pad) dx = pad - (center - half);
+    else if (center + half > window.innerWidth - pad)
+      dx = window.innerWidth - pad - (center + half);
+    setShiftX(dx);
+  }, [showTooltip, name]);
 
   return (
     <motion.span
-      className="relative px-4 py-2 rounded-full bg-green-50 text-green-700 text-sm font-medium border border-green-100 cursor-default select-none"
+      className="relative inline-flex"
       tabIndex={0}
       role="button"
       aria-label={`${name} skill details`}
@@ -623,38 +648,57 @@ function SkillPill({ name }: { name: string }) {
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
       animate={reducedMotion ? "visible" : undefined}
-      whileHover={{
-        scale: 1.08,
-        y: -3,
-        backgroundColor: "#dcfce7",
-        borderColor: "#86efac",
-        transition: { duration: 0.2 },
-      }}
     >
-      {name}
+      {/* Hover scale lives on the chip only so it does not enlarge/shift the tooltip */}
+      <motion.span
+        className="px-4 py-2 rounded-full bg-green-50 text-green-700 text-sm font-medium border border-green-100 cursor-default select-none"
+        whileHover={{
+          scale: 1.08,
+          y: -3,
+          backgroundColor: "#dcfce7",
+          borderColor: "#86efac",
+          transition: { duration: 0.2 },
+        }}
+      >
+        {name}
+      </motion.span>
       {showTooltip && details && (
         <AnimatePresence>
-          <motion.div
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-xl bg-slate-50 border border-emerald-200 shadow-sm shadow-emerald-100 z-50 whitespace-nowrap max-w-[calc(100vw-2rem)] break-words"
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.2 }}
+          {/* Wrapper owns horizontal clamp; inner motion.div owns enter/exit y so transforms don't fight */}
+          <div
+            ref={tipRef}
+            className="absolute bottom-full left-1/2 mb-2 z-50 w-max max-w-[min(16rem,calc(100vw-1.5rem))]"
+            style={{ transform: `translateX(calc(-50% + ${shiftX}px))` }}
           >
-            <div className="text-xs font-mono text-green-700 font-semibold mb-1">
-              {name}
-            </div>
-            <div className="text-[11px] font-mono text-slate-600">
-              Used in: {details.usedIn.join(", ")}
-            </div>
-            <div className="text-[11px] font-mono text-slate-600">
-              Experience:{" "}
-              <span className="text-amber-600 font-semibold">
-                {details.experience}
-              </span>
-            </div>
-            <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-50 border-r border-b border-emerald-200 rotate-45" />
-          </motion.div>
+            <motion.div
+              className="relative px-3 py-2 rounded-xl bg-slate-50 border border-emerald-200 shadow-sm shadow-emerald-100"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-xs font-mono text-green-700 font-semibold mb-1">
+                {name}
+              </div>
+              <div className="text-[11px] font-mono text-slate-600">
+                Used in: {details.usedIn.join(", ")}
+              </div>
+              <div className="text-[11px] font-mono text-slate-600">
+                Experience:{" "}
+                <span className="text-amber-600 font-semibold">
+                  {details.experience}
+                </span>
+              </div>
+              {/* Counter-shift arrow so it still points at the pill center */}
+              <div
+                className="absolute bottom-[-5px] w-2.5 h-2.5 bg-slate-50 border-r border-b border-emerald-200 rotate-45"
+                style={{
+                  left: `calc(50% - ${shiftX}px)`,
+                  transform: "translateX(-50%)",
+                }}
+              />
+            </motion.div>
+          </div>
         </AnimatePresence>
       )}
     </motion.span>
