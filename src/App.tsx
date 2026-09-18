@@ -1013,58 +1013,58 @@ function Projects() {
 
           <div className="grid sm:grid-cols-2 gap-5">
             {projects.map((p, i) => (
-              <motion.article
-                key={p.name}
-                className="group relative p-5 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.07] hover:bg-white/[0.08] hover:border-green-400/20 transition-all duration-500 cursor-pointer"
-                initial={{ opacity: 0, y: 30 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: i * 0.12 }}
-                whileHover={{ y: -6, transition: { duration: 0.25 } }}
-                onClick={() => setSelected(p)}
-              >
-                <div className="flex gap-4">
-                  {/* Project image */}
-                  <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-white/[0.06]">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
+<motion.article
+                 key={p.name}
+                 className="group relative p-5 pb-6 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.07] hover:bg-white/[0.08] hover:border-green-400/20 transition-all duration-500 cursor-pointer"
+                 initial={{ opacity: 0, y: 30 }}
+                 animate={inView ? { opacity: 1, y: 0 } : {}}
+                 transition={{ duration: 0.6, delay: i * 0.12 }}
+                 whileHover={{ y: -6, transition: { duration: 0.25 } }}
+                 onClick={() => setSelected(p)}
+               >
+                 <div className="flex gap-4">
+                   {/* Project image */}
+                   <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-white/[0.06]">
+                     <img
+                       src={p.image}
+                       alt={p.name}
+                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                     />
+                   </div>
 
-                  {/* Text content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Status dot + name */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-2 h-2 rounded-full bg-green-400 group-hover:shadow-[0_0_8px_rgba(74,222,128,0.5)] transition-shadow" />
-                      <h3 className="text-lg font-bold text-green-300">
-                        {p.name}
-                      </h3>
-                    </div>
+                   {/* Text content */}
+                   <div className="flex-1 min-w-0">
+                     {/* Status dot + name */}
+                     <div className="flex items-center gap-2 mb-2">
+                       <span className="w-2 h-2 rounded-full bg-green-400 group-hover:shadow-[0_0_8px_rgba(74,222,128,0.5)] transition-shadow" />
+                       <h3 className="text-lg font-bold text-green-300">
+                         {p.name}
+                       </h3>
+                     </div>
 
-                    <p className="text-gray-300 text-sm leading-relaxed mb-3 line-clamp-3">
-                      {p.desc}
-                    </p>
+                     <p className="text-gray-300 text-sm leading-relaxed mb-3 line-clamp-3">
+                       {p.desc}
+                     </p>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {p.tech.map((t) => (
-                        <span
-                          key={t}
-                          className="text-[11px] px-2 py-0.5 rounded-md bg-green-900/40 text-green-300/80 border border-green-800/30 font-mono"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                     <div className="flex flex-wrap gap-1.5">
+                       {p.tech.map((t) => (
+                         <span
+                           key={t}
+                           className="text-[11px] px-2 py-0.5 rounded-md bg-green-900/40 text-green-300/80 border border-green-800/30 font-mono"
+                         >
+                           {t}
+                         </span>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
 
-                {/* Click hint */}
-                <div className="absolute bottom-3 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span className="text-[10px] text-green-400/50 font-mono">
-                    click for details →
-                  </span>
-                </div>
+                 {/* Click hint */}
+                 <div className="absolute bottom-2 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                   <span className="text-[10px] text-green-400/40 font-mono">
+                     click for details →
+                   </span>
+                 </div>
               </motion.article>
             ))}
           </div>
