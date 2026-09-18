@@ -1145,6 +1145,11 @@ const socials = [
     href: "https://x.com/peterisaac_0",
     icon: "X",
   },
+  {
+    label: "WhatsApp",
+    href: "https://wa.me/201211295898?text=Hi%20Peter%2C%20I%20found%20your%20portfolio%20and%20wanted%20to%20reach%20out",
+    icon: "WA",
+  },
 ];
 
 function Contact() {
