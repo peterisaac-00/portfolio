@@ -5,6 +5,11 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 html {
   scroll-behavior: smooth;
 }

@@ -635,7 +635,7 @@ function SkillPill({ name }: { name: string }) {
       {showTooltip && details && (
         <AnimatePresence>
           <motion.div
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-xl bg-slate-50 border border-emerald-200 shadow-sm shadow-emerald-100 z-50 whitespace-nowrap max-w-[80vw]"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-xl bg-slate-50 border border-emerald-200 shadow-sm shadow-emerald-100 z-50 whitespace-nowrap max-w-[calc(100vw-2rem)] break-words"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
@@ -677,7 +677,7 @@ function Skills() {
           <p className="text-xs font-mono text-green-500 tracking-widest uppercase mb-2">
             {"// skills"}
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-14">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-14 max-w-full break-words">
             Skills & Tools
           </h2>
         </motion.div>
@@ -724,7 +724,7 @@ function Skills() {
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
                 animate={reducedMotion ? "visible" : undefined}
-                className="text-xs font-mono text-gray-400 uppercase tracking-widest mb-4"
+                className="text-xs font-mono text-gray-400 uppercase tracking-widest mb-4 max-w-full break-words"
               >
                 {group.title}
               </motion.h3>
