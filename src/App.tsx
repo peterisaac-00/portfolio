@@ -1103,8 +1103,8 @@ function Projects() {
                    </div>
                  </div>
 
-                 {/* Click hint */}
-                 <div className="absolute bottom-2 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                 {/* Click hint — always visible; transparency comes from text-green-400/40 */}
+                 <div className="absolute bottom-2 right-4 pointer-events-none">
                    <span className="text-[10px] text-green-400/40 font-mono">
                      click for details →
                    </span>
