@@ -2,9 +2,17 @@
    TESTIMONIALS DATA LAYER
    No backend exists in this project yet (Vite + React SPA,
    no API routes, no DB, no auth). This file is the single
-   source of truth for the testimonial shape so a future
-   feedback page, the public portfolio, and /admin all share
-   one model instead of drifting into duplicates.
+   source of truth for the testimonial shape so the feedback
+   page, the public portfolio, and /admin all share one model
+   instead of drifting into duplicates.
+
+   STORAGE: submissions from /feedback are persisted to
+   localStorage, so they survive reloads and appear on /admin
+   (plain <a> navigation between routes is a full page load,
+   which is why an in-memory store alone would lose them).
+   New entries always start as "pending" for admin review.
+   Swap the functions below for real API calls once a backend
+   exists.
 
    SECURITY — read before wiring a real backend:
    - There is NO auth in this repo. The `updateTestimonialStatus`
@@ -40,108 +48,103 @@ export interface Testimonial {
   createdAt: string; // ISO date string
 }
 
-/* Seed data so /admin can be reviewed without a backend.
-   Replace with a fetch to your API once the feedback page exists. */
-const seedTestimonials: Testimonial[] = [
-  {
-    id: "t-001",
-    name: "Sarah Ahmed",
-    company: "NilePay · Payment API",
-    avatar: "SA",
-    overallRating: 5,
-    professionalismRating: 5,
-    qualityRating: 5,
-    communicationRating: 5,
-    recommend: true,
-    message:
-      "Peter rebuilt our payment API and cut response times in half. Clear communication, solid docs, zero downtime on launch.",
-    status: "pending",
-    createdAt: "2026-09-02T10:15:00.000Z",
-  },
-  {
-    id: "t-002",
-    name: "Omar Khaled",
-    company: "DataRouter",
-    avatar: "OK",
-    overallRating: 4,
-    professionalismRating: 5,
-    qualityRating: 4,
-    communicationRating: 5,
-    recommend: true,
-    message:
-      "Reliable backend work and fast debugging. The Kafka pipeline he set up has been running without issues for months.",
-    status: "pending",
-    createdAt: "2026-09-05T14:40:00.000Z",
-  },
-  {
-    id: "t-003",
-    name: "Lina Mostafa",
-    avatar: "LM",
-    overallRating: 5,
-    professionalismRating: 4,
-    qualityRating: 5,
-    communicationRating: 4,
-    recommend: true,
-    message:
-      "Great experience overall. He explained every trade-off before writing code and delivered ahead of schedule.",
-    status: "pending",
-    createdAt: "2026-09-10T09:05:00.000Z",
-  },
-  {
-    id: "t-004",
-    name: "David Mensah",
-    company: "CloudVault pilot",
-    avatar: "DM",
-    overallRating: 5,
-    professionalismRating: 5,
-    qualityRating: 5,
-    communicationRating: 5,
-    recommend: true,
-    message:
-      "The distributed store Peter built survived every chaos test we threw at it. Extremely thorough engineer.",
-    status: "approved",
-    createdAt: "2026-08-18T11:30:00.000Z",
-  },
-  {
-    id: "t-005",
-    name: "Hana Youssef",
-    company: "FlowEngine",
-    avatar: "HY",
-    overallRating: 4,
-    professionalismRating: 4,
-    qualityRating: 5,
-    communicationRating: 4,
-    recommend: true,
-    message:
-      "Workflow engine was well architected and easy to extend. Would happily work together again.",
-    status: "approved",
-    createdAt: "2026-08-27T16:20:00.000Z",
-  },
-  {
-    id: "t-006",
-    name: "Spam Entry",
-    avatar: "SE",
-    overallRating: 1,
-    professionalismRating: 1,
-    qualityRating: 1,
-    communicationRating: 1,
-    recommend: false,
-    message: "This is an example of a low-quality submission to reject.",
-    status: "rejected",
-    createdAt: "2026-08-30T08:00:00.000Z",
-  },
-];
+/** Input accepted from the /feedback form (no id/status — those are
+    assigned here so every entry starts as "pending"). */
+export interface NewTestimonialInput {
+  name: string;
+  company?: string;
+  overallRating: number;
+  professionalismRating: number;
+  qualityRating: number;
+  communicationRating: number;
+  recommend: boolean;
+  message: string;
+}
 
-/* In-memory store (reset on reload) backed by the seed above.
-   Swap these two functions for real API calls later. */
-let store: Testimonial[] = seedTestimonials.map((t) => ({ ...t }));
+/* localStorage-backed store. Starts empty — no dummy data.
+   Every mutation persists, every read re-loads (cheap, and keeps
+   separate tabs/routes in sync). Falls back to memory only when
+   storage is unavailable (e.g. private mode). */
+const STORAGE_KEY = "portfolio.testimonials.v1";
+
+function isTestimonial(v: unknown): v is Testimonial {
+  if (typeof v !== "object" || v === null) return false;
+  const t = v as Record<string, unknown>;
+  return (
+    typeof t.id === "string" &&
+    typeof t.name === "string" &&
+    typeof t.message === "string" &&
+    (t.status === "pending" ||
+      t.status === "approved" ||
+      t.status === "rejected") &&
+    typeof t.overallRating === "number" &&
+    typeof t.professionalismRating === "number" &&
+    typeof t.qualityRating === "number" &&
+    typeof t.communicationRating === "number" &&
+    typeof t.recommend === "boolean" &&
+    typeof t.createdAt === "string" &&
+    typeof t.avatar === "string"
+  );
+}
+
+function loadStore(): Testimonial[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isTestimonial);
+  } catch {
+    return [];
+  }
+}
+
+let store: Testimonial[] = loadStore();
+
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    /* Storage unavailable — entries live in memory for this page
+       load only. */
+  }
+}
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-/** Public read — used by any future public testimonial section. */
+/** Public read — used by /admin (and any future public section). */
 export async function fetchTestimonials(): Promise<Testimonial[]> {
   await delay(450); // simulate network
+  store = loadStore();
   return store.map((t) => ({ ...t }));
+}
+
+/** Public write — used by /feedback. Always starts as "pending". */
+export async function submitTestimonial(
+  input: NewTestimonialInput
+): Promise<Testimonial> {
+  await delay(450); // simulate network
+  const name = input.name.trim();
+  const item: Testimonial = {
+    id: `t-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`,
+    name,
+    company: input.company?.trim() || undefined,
+    avatar: initials(name),
+    overallRating: input.overallRating,
+    professionalismRating: input.professionalismRating,
+    qualityRating: input.qualityRating,
+    communicationRating: input.communicationRating,
+    recommend: input.recommend,
+    message: input.message.trim(),
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+  store = loadStore();
+  store = [item, ...store];
+  persist();
+  return { ...item };
 }
 
 /* ── ADMIN-ONLY — must move behind server auth in production ── */
@@ -176,9 +179,11 @@ export async function updateTestimonialStatus(
 ): Promise<Testimonial> {
   requireAdmin(ctx);
   await delay(400); // simulate network
+  store = loadStore();
   const item = store.find((t) => t.id === id);
   if (!item) throw new Error("Testimonial not found.");
   item.status = status;
+  persist();
   return { ...item };
 }
 

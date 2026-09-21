@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import Footer from "../components/Footer";
 import {
   acquireLocalAdminSession,
   fetchTestimonials,
@@ -67,7 +68,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("pending");
   const [confirm, setConfirm] = useState<{
     id: string;
-    action: "approve" | "reject" | "unpublish";
+    action: "reject";
   } | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -89,7 +90,7 @@ export default function AdminPage() {
   // (event-handler `load` above is used for Retry).
   useEffect(() => {
     const prev = document.title;
-    document.title = "Testimonials Admin — Peter Isaac";
+    document.title = "Admin";
     let cancelled = false;
     fetchTestimonials()
       .then((data) => {
@@ -366,12 +367,10 @@ export default function AdminPage() {
                     <div className="flex flex-wrap gap-3">
                       <button
                         disabled={isActing}
-                        onClick={() =>
-                          setConfirm({ id: t.id, action: "approve" })
-                        }
+                        onClick={() => void runStatusChange(t.id, "approved")}
                         className="px-5 py-2.5 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-50"
                       >
-                        Approve
+                        {isActing ? "Approving…" : "Approve"}
                       </button>
                       <button
                         disabled={isActing}
@@ -389,9 +388,7 @@ export default function AdminPage() {
                     <div className="flex flex-wrap gap-3">
                       <button
                         disabled={isActing}
-                        onClick={() =>
-                          setConfirm({ id: t.id, action: "unpublish" })
-                        }
+                        onClick={() => void runStatusChange(t.id, "rejected")}
                         className="px-5 py-2.5 rounded-full border border-green-200 text-green-700 text-sm font-semibold hover:bg-green-50 transition-colors duration-300 disabled:opacity-50"
                       >
                         {isActing ? "Working…" : "Unpublish"}
@@ -409,12 +406,8 @@ export default function AdminPage() {
                   {isConfirming && confirm && (
                     <div className="mt-1 p-4 rounded-xl bg-green-50/60 border border-green-100">
                       <p className="text-sm text-gray-700 font-medium mb-3">
-                        {confirm.action === "approve" &&
-                          "Publish this testimonial?"}
                         {confirm.action === "reject" &&
                           "Reject this testimonial?"}
-                        {confirm.action === "unpublish" &&
-                          "Unpublish this testimonial? It will move back to Rejected."}
                       </p>
                       <div className="flex flex-wrap gap-3">
                         <button
@@ -424,15 +417,6 @@ export default function AdminPage() {
                         >
                           Cancel
                         </button>
-                        {confirm.action === "approve" && (
-                          <button
-                            onClick={() => void runStatusChange(t.id, "approved")}
-                            disabled={isActing}
-                            className="px-5 py-2 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-50"
-                          >
-                            {isActing ? "Approving…" : "Approve"}
-                          </button>
-                        )}
                         {confirm.action === "reject" && (
                           <button
                             onClick={() => void runStatusChange(t.id, "rejected")}
@@ -440,15 +424,6 @@ export default function AdminPage() {
                             className="px-5 py-2 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors duration-300 disabled:opacity-50"
                           >
                             {isActing ? "Rejecting…" : "Reject"}
-                          </button>
-                        )}
-                        {confirm.action === "unpublish" && (
-                          <button
-                            onClick={() => void runStatusChange(t.id, "rejected")}
-                            disabled={isActing}
-                            className="px-5 py-2 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors duration-300 disabled:opacity-50"
-                          >
-                            {isActing ? "Working…" : "Unpublish"}
                           </button>
                         )}
                       </div>
@@ -464,6 +439,7 @@ export default function AdminPage() {
           {"/* private — admin actions require server authorization in production */"}
         </p>
       </div>
+      <Footer />
     </main>
   );
 }

@@ -6,6 +6,7 @@ import {
   useReducedMotion,
 } from "framer-motion";
 import ScrollHint from "./components/ScrollHint";
+import Footer, { socials } from "./components/Footer";
 
 /* ────────────────────────────────────────────
    TEXT SCRAMBLE HOOK
@@ -391,7 +392,7 @@ function Hero() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.8, duration: 0.7 }}
         >
-          {"// Building robust systems, one endpoint at a time"}
+          {"// Building software that works beyond the demo."}
         </motion.p>
 
         {/* CTA Buttons */}
@@ -451,7 +452,7 @@ function About() {
 
   const stats = [
     { value: "20", label: "Years Old" },
-    { value: "3+", label: "Years Coding" },
+    { value: "1+", label: "Years Coding" },
     { value: "∞", label: "Curiosity" },
   ];
 
@@ -480,13 +481,19 @@ function About() {
             transition={{ duration: 0.7, delay: 0.15 }}
           >
             <p>
-              I'm <span className="text-gray-900 font-semibold">Peter Isaac</span>, a 20-year-old backend developer who lives and breathes server-side architecture. My fascination with how systems communicate, scale, and stay resilient drives everything I build.
+              Behind every product that “just works” is a backend that had to get a hundred decisions right before anyone noticed it existed.
             </p>
             <p>
-              I specialize in designing and implementing robust APIs, microservices, and distributed systems that handle real-world traffic with grace. From database schema design to deployment pipelines, I care deeply about every layer of the stack.
+              The goal isn’t just to make something work. It’s to make it reliable, maintainable, and ready for what comes next, whether that means more users, more data, or more complexity.
             </p>
             <p>
-              When I'm not writing code, you'll find me exploring new database engines, contributing to open-source projects, or lost in the pages of a system-design whitepaper.
+              Good backend engineering is about solving problems before they become problems: making the right architectural decisions, keeping data consistent, handling edge cases, and building systems that remain predictable as they grow.
+            </p>
+            <p>
+              That’s the standard I aim for in every project: software that doesn’t just work today, but continues to work when the requirements change and the pressure increases.
+            </p>
+            <p>
+              If your product has reached the point where “it works” isn’t enough anymore, that’s where I come in.
             </p>
             <div className="pt-4 flex flex-wrap gap-3">
               <span className="inline-flex items-center gap-1.5 text-xs font-mono text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
@@ -548,46 +555,33 @@ function About() {
 const skillGroups = [
   {
     title: "Languages",
-    items: ["Go", "Python", "TypeScript", "Rust", "SQL", "Bash"],
+    items: ["Python", "React", "Flask (Python)", "Django (Python)"],
   },
   {
     title: "Databases",
-    items: ["PostgreSQL", "MongoDB", "Redis", "Cassandra", "SQLite"],
+    items: ["MySQL", "SQLite"],
   },
   {
     title: "Infrastructure",
-    items: ["Docker", "Kubernetes", "AWS", "Terraform", "CI/CD", "Linux"],
+    items: ["Docker"],
   },
   {
     title: "Protocols & Tools",
-    items: ["REST", "GraphQL", "gRPC", "Git", "Nginx", "Kafka"],
+    items: ["Git", "GitHub", "Postman"],
   },
 ];
 
 const skillDetails: Record<string, { usedIn: string[]; experience: string }> = {
-  Go: { usedIn: ["Project Alpha", "DataRouter"], experience: "2+ years" },
-  Python: { usedIn: ["Fodci AI", "Backend API"], experience: "3+ years" },
-  TypeScript: { usedIn: ["FlowEngine", "NetGuard"], experience: "2+ years" },
-  Rust: { usedIn: ["CloudVault"], experience: "1+ year" },
-  SQL: { usedIn: ["DataPipeline"], experience: "3+ years" },
-  Bash: { usedIn: ["CI/CD Pipeline"], experience: "2+ years" },
-  PostgreSQL: { usedIn: ["Global4IT", "EnvSync Pro"], experience: "2+ years" },
-  MongoDB: { usedIn: ["Project Alpha"], experience: "1+ year" },
-  Redis: { usedIn: ["NetGuard", "DataPipeline"], experience: "2+ years" },
-  Cassandra: { usedIn: ["DataPipeline"], experience: "1+ year" },
-  SQLite: { usedIn: ["FlowEngine"], experience: "1+ year" },
-  Docker: { usedIn: ["Fodci AI", "Global4IT"], experience: "2+ years" },
-  Kubernetes: { usedIn: ["NetGuard", "EnvSync Pro"], experience: "1+ year" },
-  AWS: { usedIn: ["DataPipeline"], experience: "2+ years" },
-  Terraform: { usedIn: ["CloudVault"], experience: "1+ year" },
-  "CI/CD": { usedIn: ["All Projects"], experience: "3+ years" },
-  Linux: { usedIn: ["All Projects"], experience: "4+ years" },
-  REST: { usedIn: ["API Layer"], experience: "3+ years" },
-  GraphQL: { usedIn: ["NetGuard"], experience: "1+ year" },
-  gRPC: { usedIn: ["FlowEngine"], experience: "2+ years" },
-  Git: { usedIn: ["All Projects"], experience: "3+ years" },
-  Nginx: { usedIn: ["NetGuard"], experience: "1+ year" },
-  Kafka: { usedIn: ["DataPipeline"], experience: "1+ year" },
+  Python: { usedIn: ["Fodci AI", "Backend API"], experience: "1+ years" },
+  "Flask (Python)": { usedIn: ["Backend API"], experience: "1+ years" },
+  "Django (Python)": { usedIn: ["Backend API"], experience: "1+ years" },
+  React: { usedIn: ["Portfolio Website"], experience: "1+ years" },
+  MySQL: { usedIn: ["Backend API"], experience: "1+ years" },
+  SQLite: { usedIn: ["FlowEngine"], experience: "1+ years" },
+  Docker: { usedIn: ["Fodci AI", "Global4IT"], experience: "1+ years" },
+  Git: { usedIn: ["All Projects"], experience: "1+ years" },
+  GitHub: { usedIn: ["All Projects"], experience: "1+ years" },
+  Postman: { usedIn: ["API Testing"], experience: "1+ years" },
 };
 
 function SkillPill({
@@ -848,7 +842,7 @@ const projects: Project[] = [
     desc: "A high-performance workflow orchestration engine in Go. Handles complex DAG-based task scheduling with automatic retries and real-time observability.",
     fullDesc:
       "FlowEngine is a production-grade workflow orchestration engine written in Go, designed to manage complex DAG-based task pipelines at scale. It features automatic retry mechanisms with exponential backoff, failure recovery with checkpointing, and a real-time observability dashboard. The engine supports dynamic workflow composition, parallel execution branches, and conditional routing. Built with gRPC for efficient inter-service communication and PostgreSQL for durable state management, FlowEngine can process thousands of workflow transitions per second while maintaining strict consistency guarantees.",
-    tech: ["Go", "gRPC", "PostgreSQL", "Docker"],
+    tech: ["Python", "Docker", "SQLite", "Git"],
     github: "https://github.com/peterisaac/flowengine",
     demo: "https://flowengine.demo.dev",
     image: "/images/flowengine.jpg",
@@ -859,7 +853,7 @@ const projects: Project[] = [
     desc: "Real-time data processing pipeline capable of ingesting and transforming millions of events per second with exactly-once delivery semantics.",
     fullDesc:
       "DataPipeline is a high-throughput, real-time data processing system built in Python that can ingest, transform, and route millions of events per second. It implements exactly-once delivery semantics using idempotent producers and transactional consumers backed by Kafka. The pipeline supports pluggable transformation stages, schema evolution with backward compatibility, and automatic scaling based on consumer lag metrics. Deployed on AWS with Terraform-managed infrastructure, it includes comprehensive monitoring dashboards and automated alerting for production reliability.",
-    tech: ["Python", "Kafka", "Redis", "AWS"],
+    tech: ["Python", "MySQL", "Docker", "GitHub"],
     github: "https://github.com/peterisaac/datapipeline",
     demo: "https://datapipeline.demo.dev",
     image: "/images/datapipeline.jpg",
@@ -870,7 +864,7 @@ const projects: Project[] = [
     desc: "A secure distributed key-value store implementing Raft consensus for strong consistency guarantees across multi-region deployments.",
     fullDesc:
       "CloudVault is a distributed, fault-tolerant key-value store implemented in Rust that provides strong consistency guarantees through the Raft consensus algorithm. It supports multi-region deployments with automatic leader election, log replication, and split-brain prevention. The storage engine uses an LSM-tree architecture optimized for write-heavy workloads with automatic compaction and bloom filters for fast lookups. CloudVault exposes both a gRPC and REST API, supports ACID transactions within a partition, and includes a comprehensive CLI tool for cluster management and monitoring.",
-    tech: ["Rust", "Raft", "gRPC", "Terraform"],
+    tech: ["Flask (Python)", "SQLite", "Postman", "Git"],
     github: "https://github.com/peterisaac/cloudvault",
     demo: "https://cloudvault.demo.dev",
     image: "/images/cloudvault.jpg",
@@ -881,7 +875,7 @@ const projects: Project[] = [
     desc: "An intelligent API gateway with adaptive rate limiting, request caching, circuit breaking, and a real-time analytics dashboard.",
     fullDesc:
       "NetGuard is an intelligent API gateway built in Node.js that acts as a protective shield for backend services. It features adaptive rate limiting that adjusts thresholds based on traffic patterns, multi-tier caching with cache invalidation strategies, and circuit breaker patterns that prevent cascade failures. The gateway supports request/response transformation, authentication middleware, and traffic shadowing for safe testing. Its real-time analytics dashboard provides visibility into request latencies, error rates, and throughput metrics, enabling proactive performance optimization and incident response.",
-    tech: ["Node.js", "Redis", "Kubernetes", "GraphQL"],
+    tech: ["React", "Django (Python)", "Postman", "Docker"],
     github: "https://github.com/peterisaac/netguard",
     demo: "https://netguard.demo.dev",
     image: "/images/netguard.jpg",
@@ -1178,26 +1172,6 @@ function Projects() {
    CONTACT
    Clean footer with social links.
    ──────────────────────────────────────────── */
-const socials = [
-  { label: "GitHub", href: "https://github.com/peterisaac-00", icon: "GH" },
-  {
-    label: "LinkedIn",
-    href: "https://www.linkedin.com/in/peter-isaac-138623332/",
-    icon: "LI",
-  },
-  { label: "Email", href: "mailto:lunagleam1@gmail.com", icon: "@" },
-  {
-    label: "Twitter / X",
-    href: "https://x.com/peterisaac_0",
-    icon: "X",
-  },
-  {
-    label: "WhatsApp",
-    href: "https://wa.me/201211295898?text=Hi%20Peter%2C%20I%20found%20your%20portfolio%20and%20wanted%20to%20reach%20out",
-    icon: "WA",
-  },
-];
-
 function Contact() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
@@ -1252,77 +1226,10 @@ function Contact() {
 }
 
 /* ────────────────────────────────────────────
-   FOOTER
-   Calm closing — same dark-green gradient as Projects.
-   Logo + quick nav + socials, copyright centered below.
+   APP — puts it all together
+   (Footer lives in components/Footer so /admin and /feedback
+   can render the exact same footer.)
    ──────────────────────────────────────────── */
-function Footer() {
-  const footerLinks = ["home", "about", "skills", "projects", "contact"];
-
-  return (
-    <motion.footer
-      className="bg-gradient-to-b from-emerald-950 to-emerald-900 text-white"
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.9, ease: "easeOut" }}
-    >
-      <div className="max-w-5xl mx-auto px-6 py-12">
-        <p className="text-xs font-mono text-green-400 tracking-widest uppercase mb-8 text-center sm:text-left">
-          {"// footer"}
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-8">
-          {/* Logo — consistent with Navigation */}
-          <a href="#home" className="font-mono text-lg tracking-tight shrink-0">
-            <span className="text-green-400">{"<"}</span>
-            <span className="font-semibold text-white">Peter</span>
-            <span className="text-green-400">{" />"}</span>
-          </a>
-
-          {/* Quick nav */}
-          <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-            {footerLinks.map((l) => (
-              <a
-                key={l}
-                href={`#${l}`}
-                className="text-xs font-mono text-gray-400 hover:text-green-300 transition-colors duration-300"
-              >
-                {l}
-              </a>
-            ))}
-          </nav>
-
-          {/* Socials — reuses the `socials` array above */}
-          <div className="flex items-center gap-3">
-            {socials.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={s.label}
-                title={s.label}
-                className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-green-300 font-mono text-xs font-bold hover:bg-white/[0.12] hover:border-green-400/20 transition-all duration-300"
-              >
-                {s.icon}
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom line — copyright moved out of Contact */}
-        <div className="mt-10 pt-6 border-t border-white/[0.06] text-center">
-          <p className="text-xs font-mono text-green-200/40">
-            {"/* © " +
-              new Date().getFullYear() +
-              " Peter Isaac — backend by day, backend by night. */"}
-          </p>
-        </div>
-      </div>
-    </motion.footer>
-  );
-}
 
 /* ────────────────────────────────────────────
    APP — puts it all together

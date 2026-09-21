@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import Footer from "../components/Footer";
+import { submitTestimonial } from "../lib/testimonials";
 
 /* ────────────────────────────────────────────
-   /feedback — client-facing feedback prototype.
-   UI ONLY: no backend, no API, no persistence, no
-   connection to /admin yet. Submitting only shows
-   the local success state. Local state starts empty.
+   /feedback — client-facing feedback form.
+   Submitting validates locally, saves the entry as "pending"
+   via the shared testimonials store (localStorage-backed, so
+   it appears on /admin for review), then shows the local
+   success state. Local form state starts empty.
    Reuses the portfolio's existing tokens: Inter +
    JetBrains Mono, green-600 primary CTA, green-200
    borders, rounded-full pills/buttons, rounded-2xl
@@ -95,7 +98,7 @@ function StarRating({
 }
 
 export default function FeedbackPage() {
-  // Form state — starts empty, never persisted (prototype only).
+  // Form state — starts empty; submissions are saved as "pending".
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [ratings, setRatings] = useState<Record<RatingQuestion["key"], number>>({
@@ -109,11 +112,12 @@ export default function FeedbackPage() {
   const [permission, setPermission] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedName, setSubmittedName] = useState("");
 
   useEffect(() => {
     const prev = document.title;
-    document.title = "Share Your Experience — Peter Isaac";
+    document.title = "feedback";
     return () => {
       document.title = prev;
     };
@@ -141,16 +145,32 @@ export default function FeedbackPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Prototype only — validate locally, never send anywhere.
+    // Validate locally, then save as "pending" so it appears on /admin.
     if (hasErrors) {
       setShowErrors(true);
       return;
     }
     setSubmitting(true);
-    window.setTimeout(() => {
-      setSubmittedName(name.trim());
-      setSubmitting(false);
-    }, 700);
+    setSubmitError(null);
+    void (async () => {
+      try {
+        await submitTestimonial({
+          name: name.trim(),
+          company: company.trim(),
+          overallRating: ratings.overall,
+          professionalismRating: ratings.professionalism,
+          qualityRating: ratings.quality,
+          communicationRating: ratings.communication,
+          recommend: recommend === "yes",
+          message: message.trim(),
+        });
+        setSubmittedName(name.trim());
+      } catch {
+        setSubmitError("Couldn't submit your feedback. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   if (submittedName) {
@@ -197,6 +217,7 @@ export default function FeedbackPage() {
             </a>
           </motion.div>
         </div>
+        <Footer />
       </main>
     );
   }
@@ -430,12 +451,18 @@ export default function FeedbackPage() {
             >
               {submitting ? "Submitting…" : "Submit Feedback"}
             </button>
+            {submitError && (
+              <p className="mt-2 text-xs font-mono text-red-500" role="alert">
+                {submitError}
+              </p>
+            )}
             <p className="mt-4 text-xs font-mono text-gray-300">
-              {"/* prototype — nothing is sent anywhere yet */"}
+              {"/* goes to review before appearing publicly */"}
             </p>
           </div>
         </motion.form>
       </div>
+      <Footer />
     </main>
   );
 }
