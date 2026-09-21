@@ -1155,11 +1155,6 @@ function Projects() {
                  </div>
 
                  {/* Click hint — always visible; transparency comes from text-green-400/40 */}
-                 <div className="absolute bottom-2 right-4 pointer-events-none">
-                   <span className="text-[10px] text-green-400/40 font-mono">
-                     click for details →
-                   </span>
-                 </div>
               </motion.article>
             ))}
           </div>
