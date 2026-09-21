@@ -1316,7 +1316,7 @@ function Footer() {
           <p className="text-xs font-mono text-green-200/40">
             {"/* © " +
               new Date().getFullYear() +
-              " Peter Isaac. Crafted with passion. */"}
+              " Peter Isaac — backend by day, backend by night. */"}
           </p>
         </div>
       </div>
