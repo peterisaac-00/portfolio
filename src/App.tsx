@@ -5,6 +5,7 @@ import {
   AnimatePresence,
   useReducedMotion,
 } from "framer-motion";
+import ScrollHint from "./components/ScrollHint";
 
 /* ────────────────────────────────────────────
    TEXT SCRAMBLE HOOK
@@ -589,9 +590,23 @@ const skillDetails: Record<string, { usedIn: string[]; experience: string }> = {
   Kafka: { usedIn: ["DataPipeline"], experience: "1+ year" },
 };
 
-function SkillPill({ name }: { name: string }) {
+function SkillPill({
+  name,
+  active,
+  onHoverChange,
+  onSelect,
+  onToggle,
+}: {
+  name: string;
+  // Single shared state (owned by `Skills`): only one pill's details
+  // are visible at a time. Tapping a pill selects it and it stays
+  // visible until a different pill is tapped — no auto-hide timer.
+  active: boolean;
+  onHoverChange: (hovering: boolean) => void;
+  onSelect: () => void;
+  onToggle: () => void;
+}) {
   const details = skillDetails[name];
-  const [showTooltip, setShowTooltip] = useState(false);
   // Horizontal shift so a centered tooltip never paints past the viewport edges.
   // Root cause: whitespace-nowrap + left-1/2 -translate-x-1/2 tooltips overflow on
   // edge pills; html/body overflow-x:hidden then clips them (looks like the section is cut off).
@@ -600,7 +615,7 @@ function SkillPill({ name }: { name: string }) {
   const reducedMotion = useReducedMotion();
 
   useLayoutEffect(() => {
-    if (!showTooltip || !tipRef.current) {
+    if (!active || !tipRef.current) {
       setShiftX(0);
       return;
     }
@@ -617,7 +632,7 @@ function SkillPill({ name }: { name: string }) {
     else if (center + half > window.innerWidth - pad)
       dx = window.innerWidth - pad - (center + half);
     setShiftX(dx);
-  }, [showTooltip, name]);
+  }, [active, name]);
 
   return (
     <motion.span
@@ -625,15 +640,18 @@ function SkillPill({ name }: { name: string }) {
       tabIndex={0}
       role="button"
       aria-label={`${name} skill details`}
-      aria-expanded={showTooltip}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onTouchStart={() => setShowTooltip((v) => !v)}
-      onTouchEnd={() => setTimeout(() => setShowTooltip(false), 1500)}
+      aria-expanded={active}
+      onMouseEnter={() => onHoverChange(true)}
+      onMouseLeave={() => onHoverChange(false)}
+      // Touch: tapping selects this pill (stays open; tapping another
+      // pill moves the selection there). No auto-hide on touch end.
+      onTouchStart={() => onSelect()}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          setShowTooltip((v) => !v);
+          onToggle();
+        } else if (e.key === "Escape" && active) {
+          onToggle();
         }
       }}
       variants={{
@@ -662,7 +680,7 @@ function SkillPill({ name }: { name: string }) {
       >
         {name}
       </motion.span>
-      {showTooltip && details && (
+      {active && details && (
         <AnimatePresence>
           {/* Wrapper owns horizontal clamp; inner motion.div owns enter/exit y so transforms don't fight */}
           <div
@@ -708,6 +726,10 @@ function SkillPill({ name }: { name: string }) {
 function Skills() {
   const ref = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
+  // Which pill's details are visible (null = none). Shared so that
+  // tapping a different skill moves the selection there instead of
+  // stacking tooltips, and nothing auto-hides on a timer.
+  const [activeSkill, setActiveSkill] = useState<string | null>(null);
 
   return (
     <section id="skills" ref={ref} className="py-28 bg-white">
@@ -721,9 +743,19 @@ function Skills() {
           <p className="text-xs font-mono text-green-500 tracking-widest uppercase mb-2">
             {"// skills"}
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-14 max-w-full break-words">
-            Skills & Tools
-          </h2>
+          {/* Heading + hint share a shrink-wrapped flex row (w-fit, no
+              justify-between) so the hint always sits directly next to
+              the heading text; it wraps below only if both truly don't
+              fit on one line. */}
+          <div className="mb-14 flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-2">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 max-w-full break-words">
+              Skills & Tools
+            </h2>
+            <ScrollHint
+              text="Tap on a skill to view details"
+              color="#000"
+            />
+          </div>
         </motion.div>
 
         <motion.div
@@ -774,7 +806,18 @@ function Skills() {
               </motion.h3>
               <div className="flex flex-wrap gap-2.5">
                 {group.items.map((item) => (
-                  <SkillPill key={item} name={item} />
+                  <SkillPill
+                    key={item}
+                    name={item}
+                    active={activeSkill === item}
+                    onHoverChange={(hovering) =>
+                      setActiveSkill(hovering ? item : null)
+                    }
+                    onSelect={() => setActiveSkill(item)}
+                    onToggle={() =>
+                      setActiveSkill((cur) => (cur === item ? null : item))
+                    }
+                  />
                 ))}
               </div>
             </motion.div>
@@ -1050,9 +1093,17 @@ function Projects() {
             <p className="text-xs font-mono text-green-400 tracking-widest uppercase mb-2">
               {"// projects"}
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-14">
-              Featured Work
-            </h2>
+            {/* Same shrink-wrapped heading + hint row as Skills, so the
+                white hint sits directly next to the heading text. */}
+            <div className="mb-14 flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-2">
+              <h2 className="text-3xl sm:text-4xl font-bold max-w-full break-words">
+                Featured Work
+              </h2>
+              <ScrollHint
+                text="Tap on a project to view details"
+                color="#fff"
+              />
+            </div>
           </motion.div>
 
           <div className="grid sm:grid-cols-2 gap-5">
