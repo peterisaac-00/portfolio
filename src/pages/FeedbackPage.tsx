@@ -83,7 +83,7 @@ function StarRating({
           onClick={() => onChange(s)}
           className="p-1.5 -m-1.5 text-2xl sm:text-[1.7rem] leading-none transition-all duration-150 hover:scale-110 active:scale-95"
         >
-          <span className={s <= shown ? "text-green-500" : "text-gray-200"}>
+          <span className={s <= shown ? "text-green-500 dark:text-green-400" : "text-gray-200 dark:text-gray-700"}>
             ★
           </span>
         </button>
@@ -175,19 +175,19 @@ export default function FeedbackPage() {
 
   if (submittedName) {
     return (
-      <main className="bg-white text-gray-900 antialiased min-h-screen">
+      <main className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased min-h-screen">
         <div className="max-w-2xl mx-auto px-6 pt-16 pb-20 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-xs font-mono text-green-500 tracking-[0.3em] uppercase mb-6">
+            <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-[0.3em] uppercase mb-6">
               Peter Isaac
             </p>
-            <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+            <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
               <svg
-                className="w-7 h-7 text-green-600"
+                className="w-7 h-7 text-green-600 dark:text-green-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -200,10 +200,10 @@ export default function FeedbackPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Thank you, {submittedName}!
             </h1>
-            <p className="text-gray-600 text-[15px] leading-relaxed mb-2">
+            <p className="text-gray-600 dark:text-gray-400 text-[15px] leading-relaxed mb-2">
               Your feedback has been submitted successfully.
             </p>
             <p className="text-gray-400 text-[15px] leading-relaxed mb-10">
@@ -211,7 +211,7 @@ export default function FeedbackPage() {
             </p>
             <a
               href="/"
-              className="inline-block px-6 py-3 rounded-full border border-green-200 text-green-700 text-sm font-semibold hover:bg-green-50 transition-colors duration-300"
+              className="inline-block px-6 py-3 rounded-full border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-300"
             >
               Back to Portfolio
             </a>
@@ -223,20 +223,20 @@ export default function FeedbackPage() {
   }
 
   return (
-    <main className="bg-white text-gray-900 antialiased min-h-screen">
+    <main className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased min-h-screen">
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-20">
         {/* Minimal top row — same pattern as /admin, not the public navbar */}
         <div className="flex items-center justify-between mb-10">
           <a
             href="/"
-            className="text-xs font-mono text-gray-400 hover:text-green-600 transition-colors"
+            className="text-xs font-mono text-gray-400 hover:text-green-600 dark:text-green-400 dark:hover:text-green-400 transition-colors"
           >
             ← Back to portfolio
           </a>
           <a href="/" className="font-mono text-lg tracking-tight">
-            <span className="text-green-500">{"<"}</span>
-            <span className="font-semibold text-gray-900">Peter</span>
-            <span className="text-green-500">{" />"}</span>
+            <span className="text-green-500 dark:text-green-400">{"<"}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">Peter</span>
+            <span className="text-green-500 dark:text-green-400">{" />"}</span>
           </a>
         </div>
 
@@ -247,10 +247,10 @@ export default function FeedbackPage() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <p className="text-xs font-mono text-green-500 tracking-[0.3em] uppercase mb-4">
+          <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-[0.3em] uppercase mb-4">
             Peter Isaac
           </p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Share Your Experience
           </h1>
           <p className="text-gray-400 text-[15px] leading-relaxed max-w-md mx-auto">
@@ -273,9 +273,9 @@ export default function FeedbackPage() {
             <div>
               <label
                 htmlFor="fb-name"
-                className="block text-sm font-semibold text-gray-900 mb-2"
+                className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2"
               >
-                Your Name <span className="text-green-600">*</span>
+                Your Name <span className="text-green-600 dark:text-green-400">*</span>
               </label>
               <input
                 id="fb-name"
@@ -284,10 +284,10 @@ export default function FeedbackPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your name"
                 aria-invalid={showErrors && Boolean(nameError)}
-                className="w-full px-4 py-3 rounded-xl border border-green-200 bg-white text-gray-900 text-[15px] placeholder:text-gray-300 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 transition"
+                className="w-full px-4 py-3 rounded-xl border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-[15px] placeholder:text-gray-300 dark:placeholder:text-gray-600 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 transition"
               />
               {showErrors && nameError && (
-                <p className="mt-2 text-xs font-mono text-red-500" role="alert">
+                <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
                   {nameError}
                 </p>
               )}
@@ -295,7 +295,7 @@ export default function FeedbackPage() {
             <div>
               <label
                 htmlFor="fb-company"
-                className="block text-sm font-semibold text-gray-900 mb-2"
+                className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2"
               >
                 Company / Project{" "}
                 <span className="text-gray-300 font-normal">(optional)</span>
@@ -306,26 +306,26 @@ export default function FeedbackPage() {
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="Company or project name (optional)"
-                className="w-full px-4 py-3 rounded-xl border border-green-200 bg-white text-gray-900 text-[15px] placeholder:text-gray-300 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 transition"
+                className="w-full px-4 py-3 rounded-xl border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-[15px] placeholder:text-gray-300 dark:placeholder:text-gray-600 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 transition"
               />
             </div>
           </section>
 
           {/* Ratings */}
           <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-1">
-              Your Ratings <span className="text-green-600">*</span>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+              Your Ratings <span className="text-green-600 dark:text-green-400">*</span>
             </h2>
             <p className="text-sm text-gray-400 mb-5">
               Tap a star to rate each area.
             </p>
-            <div className="p-5 rounded-2xl bg-white shadow-sm border border-green-100/80 space-y-5">
+            <div className="p-5 rounded-2xl bg-white dark:bg-gray-950 shadow-sm border border-green-100/80 dark:border-green-900 space-y-5">
               {RATING_QUESTIONS.map((q) => (
                 <div key={q.key}>
                   <p className="text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-1">
                     {q.title}
                   </p>
-                  <p className="text-sm text-gray-600 mb-2">{q.hint}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{q.hint}</p>
                   <StarRating
                     value={ratings[q.key]}
                     onChange={(v) =>
@@ -338,7 +338,7 @@ export default function FeedbackPage() {
               ))}
             </div>
             {showErrors && ratingsError && (
-              <p className="mt-2 text-xs font-mono text-red-500" role="alert">
+              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
                 {ratingsError}
               </p>
             )}
@@ -346,12 +346,12 @@ export default function FeedbackPage() {
 
           {/* Recommendation */}
           <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Would you recommend working with Peter?{" "}
-              <span className="text-green-600">*</span>
+              <span className="text-green-600 dark:text-green-400">*</span>
             </h2>
             <div
-              className="p-1 rounded-full border border-green-200 bg-white flex gap-1"
+              className="p-1 rounded-full border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 flex gap-1"
               role="radiogroup"
               aria-label="Would you recommend working with Peter?"
             >
@@ -371,8 +371,8 @@ export default function FeedbackPage() {
                     onClick={() => setRecommend(opt.value)}
                     className={`flex-1 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${
                       selected
-                        ? "bg-green-600 text-white shadow-lg shadow-green-600/20"
-                        : "text-gray-600 hover:bg-green-50"
+                        ? "bg-green-600 dark:bg-green-600 text-white shadow-lg shadow-green-600/20"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20"
                     }`}
                   >
                     {opt.label}
@@ -381,7 +381,7 @@ export default function FeedbackPage() {
               })}
             </div>
             {showErrors && recommendError && (
-              <p className="mt-2 text-xs font-mono text-red-500" role="alert">
+              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
                 {recommendError}
               </p>
             )}
@@ -392,10 +392,10 @@ export default function FeedbackPage() {
             <div className="flex items-baseline justify-between gap-3 mb-2">
               <label
                 htmlFor="fb-message"
-                className="text-sm font-semibold text-gray-900"
+                className="text-sm font-semibold text-gray-900 dark:text-gray-100"
               >
                 Tell me about your experience{" "}
-                <span className="text-green-600">*</span>
+                <span className="text-green-600 dark:text-green-400">*</span>
               </label>
               <span className="text-xs font-mono text-gray-300 shrink-0">
                 {message.length}/{MESSAGE_MAX}
@@ -408,10 +408,10 @@ export default function FeedbackPage() {
               placeholder="What did you enjoy about working with me? How was the process or final result?"
               rows={5}
               aria-invalid={showErrors && Boolean(messageError)}
-              className="w-full px-4 py-3 rounded-2xl border border-green-200 bg-white text-gray-900 text-[15px] leading-relaxed placeholder:text-gray-300 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 transition resize-y min-h-32"
+              className="w-full px-4 py-3 rounded-2xl border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-[15px] leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 transition resize-y min-h-32"
             />
             {showErrors && messageError && (
-              <p className="mt-2 text-xs font-mono text-red-500" role="alert">
+              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
                 {messageError}
               </p>
             )}
@@ -428,15 +428,15 @@ export default function FeedbackPage() {
                 type="checkbox"
                 checked={permission}
                 onChange={(e) => setPermission(e.target.checked)}
-                className="mt-0.5 w-5 h-5 shrink-0 rounded-md border-green-300 accent-green-600 cursor-pointer"
+                className="mt-0.5 w-5 h-5 shrink-0 rounded-md border-green-300 dark:border-green-800 accent-green-600 cursor-pointer"
               />
-              <span className="text-sm text-gray-600 leading-relaxed">
+              <span className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                 I agree to have my feedback displayed on Peter&apos;s
-                portfolio. <span className="text-green-600">*</span>
+                portfolio. <span className="text-green-600 dark:text-green-400">*</span>
               </span>
             </label>
             {showErrors && permissionError && (
-              <p className="mt-2 text-xs font-mono text-red-500" role="alert">
+              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
                 {permissionError}
               </p>
             )}
@@ -447,12 +447,12 @@ export default function FeedbackPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full sm:w-auto px-8 py-3 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-60"
+              className="w-full sm:w-auto px-8 py-3 rounded-full bg-green-600 dark:bg-green-600 text-white text-sm font-semibold hover:bg-green-700 dark:hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-60"
             >
               {submitting ? "Submitting…" : "Submit Feedback"}
             </button>
             {submitError && (
-              <p className="mt-2 text-xs font-mono text-red-500" role="alert">
+              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
                 {submitError}
               </p>
             )}

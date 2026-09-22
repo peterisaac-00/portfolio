@@ -35,7 +35,7 @@ function Stars({ value, label }: { value: number; label: string }) {
       {Array.from({ length: 5 }, (_, i) => (
         <span
           key={i}
-          className={i < safe ? "text-green-500" : "text-gray-200"}
+          className={i < safe ? "text-green-500 dark:text-green-400" : "text-gray-200 dark:text-gray-700"}
         >
           ★
         </span>
@@ -47,10 +47,10 @@ function Stars({ value, label }: { value: number; label: string }) {
 function StatusBadge({ status }: { status: TestimonialStatus }) {
   const styles =
     status === "approved"
-      ? "text-green-600 bg-green-50 border-green-100"
+      ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-gray-900 border-green-100 dark:border-green-900"
       : status === "pending"
-        ? "text-amber-600 bg-amber-50 border-amber-100"
-        : "text-gray-500 bg-gray-50 border-gray-200";
+        ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-100 dark:border-amber-900"
+        : "text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-800";
   return (
     <span
       className={`inline-flex items-center text-[11px] font-mono uppercase tracking-widest px-3 py-1 rounded-full border ${styles}`}
@@ -163,20 +163,20 @@ export default function AdminPage() {
   };
 
   return (
-    <main className="bg-white text-gray-900 antialiased min-h-screen">
+    <main className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased min-h-screen">
       <div className="max-w-5xl mx-auto px-6 pt-8 pb-20">
         {/* Minimal top row — back link + logo mark (not the public navbar) */}
         <div className="flex items-center justify-between mb-10">
           <a
             href="/"
-            className="text-xs font-mono text-gray-400 hover:text-green-600 transition-colors"
+            className="text-xs font-mono text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
           >
             ← Back to portfolio
           </a>
           <a href="/" className="font-mono text-lg tracking-tight">
-            <span className="text-green-500">{"<"}</span>
-            <span className="font-semibold text-gray-900">Peter</span>
-            <span className="text-green-500">{" />"}</span>
+            <span className="text-green-500 dark:text-green-400">{"<"}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">Peter</span>
+            <span className="text-green-500 dark:text-green-400">{" />"}</span>
           </a>
         </div>
 
@@ -188,10 +188,10 @@ export default function AdminPage() {
           className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8"
         >
           <div>
-            <p className="text-xs font-mono text-green-500 tracking-widest uppercase mb-2">
+            <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-widest uppercase mb-2">
               {"// admin"}
             </p>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Testimonials Admin
             </h1>
             <p className="text-gray-400 text-[15px] leading-relaxed">
@@ -199,10 +199,10 @@ export default function AdminPage() {
             </p>
           </div>
           <span
-            className="inline-flex self-start sm:self-auto items-center text-xs font-mono text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-100"
+            className="inline-flex self-start sm:self-auto items-center text-xs font-mono text-green-700 dark:text-green-400 bg-green-50 dark:bg-gray-900 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-900"
             aria-live="polite"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-green-400 mr-2" />
             {counts.pending} Pending
           </span>
         </motion.div>
@@ -230,8 +230,8 @@ export default function AdminPage() {
                 }}
                 className={`px-4 py-2 rounded-full text-sm font-medium border transition-all duration-300 capitalize ${
                   active
-                    ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/20"
-                    : "bg-white text-gray-600 border-green-200 hover:bg-green-50 hover:border-green-400"
+                    ? "bg-green-600 dark:bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/20"
+                    : "bg-white dark:bg-gray-950 text-gray-600 dark:text-gray-400 border-green-200 dark:border-green-900 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-400"
                 }`}
               >
                 {t}{" "}
@@ -246,7 +246,7 @@ export default function AdminPage() {
         </motion.div>
 
         {actionError && (
-          <p className="text-xs font-mono text-red-500 mb-4" role="alert">
+          <p className="text-xs font-mono text-red-500 dark:text-red-400 mb-4" role="alert">
             {"// "}
             {actionError}
           </p>
@@ -258,42 +258,42 @@ export default function AdminPage() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="p-5 rounded-2xl bg-white border border-green-100/80 animate-pulse"
+                className="p-5 rounded-2xl bg-white dark:bg-gray-950 border border-green-100/80 dark:border-green-900 animate-pulse"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-green-50" />
+                  <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-gray-800" />
                   <div className="flex-1">
-                    <div className="h-3 w-32 rounded bg-gray-100 mb-2" />
-                    <div className="h-2.5 w-24 rounded bg-gray-50" />
+                    <div className="h-3 w-32 rounded bg-gray-100 dark:bg-gray-800 mb-2" />
+                    <div className="h-2.5 w-24 rounded bg-gray-50 dark:bg-gray-800" />
                   </div>
                 </div>
-                <div className="h-2.5 w-full rounded bg-gray-50 mb-2" />
-                <div className="h-2.5 w-3/4 rounded bg-gray-50" />
+                <div className="h-2.5 w-full rounded bg-gray-50 dark:bg-gray-800 mb-2" />
+                <div className="h-2.5 w-3/4 rounded bg-gray-50 dark:bg-gray-800" />
               </div>
             ))}
           </div>
         ) : error ? (
-          <div className="p-8 rounded-2xl bg-white border border-green-100/80 text-center">
-            <p className="text-xs font-mono text-green-500 tracking-widest uppercase mb-2">
+          <div className="p-8 rounded-2xl bg-white dark:bg-gray-950 border border-green-100/80 dark:border-green-900 text-center">
+            <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-widest uppercase mb-2">
               {"// error"}
             </p>
-            <p className="text-gray-900 font-semibold mb-2">
+            <p className="text-gray-900 dark:text-gray-100 font-semibold mb-2">
               Couldn't load testimonials
             </p>
             <p className="text-gray-400 text-sm mb-6">{error}</p>
             <button
               onClick={() => void load()}
-              className="px-5 py-2.5 rounded-full border border-green-200 text-green-700 text-sm font-semibold hover:bg-green-50 transition-colors duration-300"
+              className="px-5 py-2.5 rounded-full border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-300"
             >
               Try again
             </button>
           </div>
         ) : visible.length === 0 ? (
-          <div className="p-12 rounded-2xl bg-white border border-green-100/80 text-center">
-            <p className="text-xs font-mono text-green-500 tracking-widest uppercase mb-2">
+          <div className="p-12 rounded-2xl bg-white dark:bg-gray-950 border border-green-100/80 dark:border-green-900 text-center">
+            <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-widest uppercase mb-2">
               {"// " + tab}
             </p>
-            <p className="text-gray-900 font-semibold mb-2">
+            <p className="text-gray-900 dark:text-gray-100 font-semibold mb-2">
               {emptyCopy[tab].title}
             </p>
             <p className="text-gray-400 text-sm">{emptyCopy[tab].sub}</p>
@@ -309,15 +309,15 @@ export default function AdminPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: Math.min(i * 0.06, 0.3) }}
-                  className="p-5 rounded-2xl bg-white shadow-sm border border-green-100/80 hover:shadow-md transition-all duration-300"
+                  className="p-5 rounded-2xl bg-white dark:bg-gray-950 shadow-sm border border-green-100/80 dark:border-green-900 hover:shadow-md transition-all duration-300"
                 >
                   {/* Identity */}
                   <div className="flex flex-wrap items-center gap-3 mb-5">
-                    <span className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-mono text-xs font-bold shrink-0">
+                    <span className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-700 dark:text-green-400 font-mono text-xs font-bold shrink-0">
                       {t.avatar}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-gray-900 font-semibold text-[15px] leading-tight truncate">
+                      <p className="text-gray-900 dark:text-gray-100 font-semibold text-[15px] leading-tight truncate">
                         {t.name}
                       </p>
                       <p className="text-xs text-gray-400 truncate">
@@ -353,7 +353,7 @@ export default function AdminPage() {
                   <p className="text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">
                     Client Feedback
                   </p>
-                  <p className="text-gray-600 text-[15px] leading-relaxed mb-2">
+                  <p className="text-gray-600 dark:text-gray-400 text-[15px] leading-relaxed mb-2">
                     {t.message}
                   </p>
                   <p className="text-xs font-mono text-gray-300 mb-5">
@@ -368,7 +368,7 @@ export default function AdminPage() {
                       <button
                         disabled={isActing}
                         onClick={() => void runStatusChange(t.id, "approved")}
-                        className="px-5 py-2.5 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-50"
+                        className="px-5 py-2.5 rounded-full bg-green-600 dark:bg-green-600 text-white text-sm font-semibold hover:bg-green-700 dark:hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-50"
                       >
                         {isActing ? "Approving…" : "Approve"}
                       </button>
@@ -377,7 +377,7 @@ export default function AdminPage() {
                         onClick={() =>
                           setConfirm({ id: t.id, action: "reject" })
                         }
-                        className="px-5 py-2.5 rounded-full border border-green-200 text-green-700 text-sm font-semibold hover:bg-green-50 transition-colors duration-300 disabled:opacity-50"
+                        className="px-5 py-2.5 rounded-full border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-300 disabled:opacity-50"
                       >
                         Reject
                       </button>
@@ -389,7 +389,7 @@ export default function AdminPage() {
                       <button
                         disabled={isActing}
                         onClick={() => void runStatusChange(t.id, "rejected")}
-                        className="px-5 py-2.5 rounded-full border border-green-200 text-green-700 text-sm font-semibold hover:bg-green-50 transition-colors duration-300 disabled:opacity-50"
+                        className="px-5 py-2.5 rounded-full border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-300 disabled:opacity-50"
                       >
                         {isActing ? "Working…" : "Unpublish"}
                       </button>
@@ -404,8 +404,8 @@ export default function AdminPage() {
 
                   {/* Inline confirmation (small, not a big modal) */}
                   {isConfirming && confirm && (
-                    <div className="mt-1 p-4 rounded-xl bg-green-50/60 border border-green-100">
-                      <p className="text-sm text-gray-700 font-medium mb-3">
+                    <div className="mt-1 p-4 rounded-xl bg-green-50/60 dark:bg-gray-900 border border-green-100 dark:border-green-900">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium mb-3">
                         {confirm.action === "reject" &&
                           "Reject this testimonial?"}
                       </p>
@@ -413,7 +413,7 @@ export default function AdminPage() {
                         <button
                           onClick={() => setConfirm(null)}
                           disabled={isActing}
-                          className="px-5 py-2 rounded-full border border-green-200 text-green-700 text-sm font-semibold hover:bg-white transition-colors duration-300 disabled:opacity-50"
+                          className="px-5 py-2 rounded-full border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-white dark:hover:bg-gray-800 transition-colors duration-300 disabled:opacity-50"
                         >
                           Cancel
                         </button>
@@ -421,7 +421,7 @@ export default function AdminPage() {
                           <button
                             onClick={() => void runStatusChange(t.id, "rejected")}
                             disabled={isActing}
-                            className="px-5 py-2 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors duration-300 disabled:opacity-50"
+                            className="px-5 py-2 rounded-full bg-gray-900 dark:bg-gray-700 text-white text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors duration-300 disabled:opacity-50"
                           >
                             {isActing ? "Rejecting…" : "Reject"}
                           </button>
