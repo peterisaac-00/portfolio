@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 
 /* ────────────────────────────────────────────
@@ -58,33 +58,18 @@ export default function ScrollHint({
   const firedRef = useRef(false);
   const scrolledRef = useRef(false);
 
-  /* Dark mode: track the "dark" class on <html> so the hint line /
-     text / caret stay visible when the surrounding section switches
-     to its dark background (e.g. Skills goes white → gray-950).
-     Light-mode `color` prop is kept as-is; in dark mode a black
-     hint (#000) is remapped to gray-100 for contrast. A white hint
-     (#fff, used on the always-dark Projects section) is kept as-is
-     since it already reads fine on dark. */
-  const [isDark, setIsDark] = useState<boolean>(
-    () =>
-      typeof document !== "undefined" &&
-      document.documentElement.classList.contains("dark")
-  );
-
-  useEffect(() => {
-    const el = document.documentElement;
-    const obs = new MutationObserver(() =>
-      setIsDark(el.classList.contains("dark"))
-    );
-    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-
+  /* Hint colors are pure CSS: `--sh-color` paints the line /
+     text / caret in light mode, `--sh-color-dark` takes over inside
+     a `prefers-color-scheme: dark` media query (see the <style>
+     block in the render output below). A black hint (#000, used on
+     the light Skills section) remaps to gray-100 in dark mode so it
+     stays visible on the dark section background; a white hint
+     (#fff, used on the always-dark Projects section) is kept as-is. */
   const isBlackHint =
     color.toLowerCase() === "#000" ||
     color.toLowerCase() === "#000000" ||
     color.toLowerCase() === "black";
-  const effectiveColor = isDark && isBlackHint ? "#f3f4f6" : color;
+  const darkColor = isBlackHint ? "#f3f4f6" : color;
 
   // Total typewriter time — the clip-path unfurl below uses the same
   // duration so width-reveal and character-reveal stay in sync.
@@ -190,7 +175,8 @@ export default function ScrollHint({
     <span
       ref={rootRef}
       aria-hidden="true"
-      className="pointer-events-none inline-flex min-w-0 items-center whitespace-nowrap text-gray-900 dark:text-gray-100"
+      className="pointer-events-none inline-flex min-w-0 items-center whitespace-nowrap"
+      style={{ "--sh-color": color, "--sh-color-dark": darkColor } as CSSProperties}
     >
       {phase !== null && (
         <span
@@ -202,12 +188,12 @@ export default function ScrollHint({
               Fixed-size box so the rotation never shifts layout. */}
           <span className="flex h-4 w-4 items-center justify-center">
             <span
+              className="scroll-hint-fg"
               style={
                 phase === "draw"
                   ? {
                       width: 16,
                       height: 2,
-                      backgroundColor: effectiveColor,
                       transformOrigin: "left center",
                       animation:
                         "scroll-hint-draw 0.3s ease-out forwards",
@@ -215,7 +201,6 @@ export default function ScrollHint({
                   : {
                       width: 16,
                       height: 2,
-                      backgroundColor: effectiveColor,
                       transformOrigin: "center",
                       transform: "rotate(90deg)",
                       animation:
@@ -234,12 +219,11 @@ export default function ScrollHint({
               under overflow:hidden + leading-none.) */}
           {showText && (
             <span
-              className="whitespace-nowrap font-mono text-[11px] leading-none text-gray-900 dark:text-gray-100"
+              className="scroll-hint-label whitespace-nowrap font-mono text-[11px] leading-none"
               style={{
                 overflow: "hidden",
                 paddingTop: 3,
                 paddingBottom: 3,
-                color: effectiveColor,
                 clipPath: "inset(0 0 0 0)",
                 animation:
                   phase === "typing"
@@ -250,11 +234,10 @@ export default function ScrollHint({
               {text.slice(0, typed)}
               {phase === "typing" && (
                 <span
-                  className="ml-[2px] inline-block align-baseline"
+                  className="scroll-hint-fg ml-[2px] inline-block align-baseline"
                   style={{
                     width: 1,
                     height: 11,
-                    backgroundColor: effectiveColor,
                     animation:
                       "scroll-hint-caret 0.8s steps(1) infinite",
                   }}
@@ -264,7 +247,7 @@ export default function ScrollHint({
           )}
         </span>
       )}
-      <style>{`@keyframes scroll-hint-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes scroll-hint-morph{from{transform:rotate(0deg)}to{transform:rotate(90deg)}}@keyframes scroll-hint-unfurl{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes scroll-hint-caret{0%,100%{opacity:1}50%{opacity:0}}`}</style>
+      <style>{`@keyframes scroll-hint-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes scroll-hint-morph{from{transform:rotate(0deg)}to{transform:rotate(90deg)}}@keyframes scroll-hint-unfurl{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes scroll-hint-caret{0%,100%{opacity:1}50%{opacity:0}}.scroll-hint-fg{background-color:var(--sh-color)}.scroll-hint-label{color:var(--sh-color)}@media (prefers-color-scheme: dark){.scroll-hint-fg{background-color:var(--sh-color-dark)}.scroll-hint-label{color:var(--sh-color-dark)}}`}</style>
     </span>
   );
 }

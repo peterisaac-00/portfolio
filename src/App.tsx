@@ -7,7 +7,6 @@ import {
 } from "framer-motion";
 import ScrollHint from "./components/ScrollHint";
 import Footer, { socials } from "./components/Footer";
-import ThemeToggle from "./components/ThemeToggle";
 
 /* ────────────────────────────────────────────
    TEXT SCRAMBLE HOOK
@@ -232,55 +231,52 @@ function Navigation() {
           </span>
         </a>
 
-        {/* Desktop links + theme toggle */}
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-8">
-            {links.map((l) => (
-              <a
-                key={l}
-                href={`#${l}`}
-                className={`relative text-[13px] uppercase tracking-widest font-medium transition-colors duration-300 ${
-                  active === l
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-gray-400 hover:text-green-600 dark:hover:text-green-400"
-                }`}
-              >
-                {l}
-                {active === l && (
-                  <motion.span
-                    layoutId="nav-pill"
-                    className="absolute -bottom-1 left-0 right-0 h-[2px] bg-green-500 dark:bg-green-500 rounded-full"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </a>
-            ))}
-          </div>
-          <ThemeToggle />
-
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden flex flex-col gap-[5px] p-2"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Toggle menu"
-          >
-            <span
-              className={`block w-5 h-[2px] bg-gray-700 dark:bg-gray-200 transition-transform duration-300 ${
-                menuOpen ? "rotate-45 translate-y-[7px]" : ""
+        {/* Desktop links */}
+        <div className="hidden md:flex items-center gap-8">
+          {links.map((l) => (
+            <a
+              key={l}
+              href={`#${l}`}
+              className={`relative text-[13px] uppercase tracking-widest font-medium transition-colors duration-300 ${
+                active === l
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-gray-400 hover:text-green-600 dark:hover:text-green-400"
               }`}
-            />
-            <span
-              className={`block w-5 h-[2px] bg-gray-700 dark:bg-gray-200 transition-opacity duration-300 ${
-                menuOpen ? "opacity-0" : ""
-              }`}
-            />
-            <span
-              className={`block w-5 h-[2px] bg-gray-700 dark:bg-gray-200 transition-transform duration-300 ${
-                menuOpen ? "-rotate-45 -translate-y-[7px]" : ""
-              }`}
-            />
-          </button>
+            >
+              {l}
+              {active === l && (
+                <motion.span
+                  layoutId="nav-pill"
+                  className="absolute -bottom-1 left-0 right-0 h-[2px] bg-green-500 dark:bg-green-500 rounded-full"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+            </a>
+          ))}
         </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden flex flex-col gap-[5px] p-2"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span
+            className={`block w-5 h-[2px] bg-gray-700 dark:bg-gray-200 transition-transform duration-300 ${
+              menuOpen ? "rotate-45 translate-y-[7px]" : ""
+            }`}
+          />
+          <span
+            className={`block w-5 h-[2px] bg-gray-700 dark:bg-gray-200 transition-opacity duration-300 ${
+              menuOpen ? "opacity-0" : ""
+            }`}
+          />
+          <span
+            className={`block w-5 h-[2px] bg-gray-700 dark:bg-gray-200 transition-transform duration-300 ${
+              menuOpen ? "-rotate-45 -translate-y-[7px]" : ""
+            }`}
+          />
+        </button>
       </div>
 
       {/* Mobile menu */}
