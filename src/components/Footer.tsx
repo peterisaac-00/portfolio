@@ -39,7 +39,7 @@ export default function Footer() {
 
   return (
     <motion.footer
-      className="bg-gradient-to-b from-emerald-950 dark:from-emerald-950 to-emerald-900 dark:to-emerald-900 text-white dark:text-white"
+      className="bg-gradient-to-b from-emerald-950 to-emerald-900 dark:from-gray-950 dark:to-emerald-950 text-white dark:text-white"
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}

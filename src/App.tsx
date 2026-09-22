@@ -1080,7 +1080,7 @@ function Projects() {
       <section
         id="projects"
         ref={ref}
-        className="py-28 bg-gradient-to-b from-emerald-950 to-emerald-900 text-white"
+        className="py-28 bg-gradient-to-b from-emerald-950 to-emerald-900 dark:from-gray-950 dark:to-emerald-950 text-white"
       >
         <div className="max-w-5xl mx-auto px-6">
           <motion.div
