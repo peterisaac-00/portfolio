@@ -1,9 +1,13 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import App from "./App";
-import AdminPage from "./pages/AdminPage";
-import FeedbackPage from "./pages/FeedbackPage";
+
+/* Route-based code splitting: each route loads only its own
+   chunk, so visiting /feedback never downloads/parses the
+   large App/Admin bundles before the entrance animation. */
+const App = lazy(() => import("./App"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const FeedbackPage = lazy(() => import("./pages/FeedbackPage"));
 
 /* Minimal pathname router — no new dependencies.
    "/" renders the public portfolio (App, untouched).
@@ -19,12 +23,16 @@ function getRoute(): "admin" | "feedback" | "home" {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {getRoute() === "admin" ? (
-      <AdminPage />
-    ) : getRoute() === "feedback" ? (
-      <FeedbackPage />
-    ) : (
-      <App />
-    )}
+    {/* Invisible fallback so the entrance animation is the first
+        thing perceived, not a spinner. */}
+    <Suspense fallback={null}>
+      {getRoute() === "admin" ? (
+        <AdminPage />
+      ) : getRoute() === "feedback" ? (
+        <FeedbackPage />
+      ) : (
+        <App />
+      )}
+    </Suspense>
   </StrictMode>
 );

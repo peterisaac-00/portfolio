@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import Footer from "../components/Footer";
 import {
-  acquireLocalAdminSession,
+  ApiError,
+  adminLogin,
+  adminLogout,
+  checkAdminSession,
   fetchTestimonials,
   formatDate,
   updateTestimonialStatus,
@@ -12,9 +15,13 @@ import {
 
 /* ────────────────────────────────────────────
    /admin — private testimonials control panel.
-   Deliberately reuses the portfolio's existing tokens:
-   max-w-5xl mx-auto px-6, "// ..." font-mono labels,
-   rounded-full pills, rounded-2xl bordered cards,
+   Gated by real server-side authentication: without a
+   valid session cookie the page shows a password form,
+   never the dashboard. All reads/writes hit the shared
+   Postgres-backed API; no admin decision happens in the
+   browser. Deliberately reuses the portfolio's existing
+   tokens: max-w-5xl mx-auto px-6, "// ..." font-mono
+   labels, rounded-full pills, rounded-2xl bordered cards,
    green-600 primary + green-200 secondary buttons.
    No sidebar, no charts, no dashboard chrome.
    NOT linked from the public navbar.
@@ -60,8 +67,32 @@ function StatusBadge({ status }: { status: TestimonialStatus }) {
   );
 }
 
+function TopRow() {
+  return (
+    <div className="flex items-center justify-between mb-10">
+      <a
+        href="/"
+        className="text-xs font-mono text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+      >
+        ← Back to portfolio
+      </a>
+      <a href="/" className="font-mono text-lg tracking-tight">
+        <span className="text-green-500 dark:text-green-400">{"<"}</span>
+        <span className="font-semibold text-gray-900 dark:text-gray-100">Peter</span>
+        <span className="text-green-500 dark:text-green-400">{" />"}</span>
+      </a>
+    </div>
+  );
+}
+
 export default function AdminPage() {
-  const adminCtx = useMemo(() => acquireLocalAdminSession(), []);
+  // null = session still being checked; never render the
+  // dashboard until the server confirms who we are.
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [password, setPassword] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
   const [items, setItems] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,33 +110,71 @@ export default function AdminPage() {
     try {
       const data = await fetchTestimonials();
       setItems(data);
-    } catch {
-      setError("Couldn't load testimonials. Check your connection and try again.");
+      setAuthed(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        // Session expired mid-visit — back to the login form.
+        setAuthed(false);
+        setItems([]);
+      } else {
+        setError("Couldn't load testimonials. Check your connection and try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial fetch: setState only inside the async callbacks below
-  // (event-handler `load` above is used for Retry).
+  // Initial gate: title + noindex, then ask the SERVER whether
+  // the session cookie is valid before loading anything.
   useEffect(() => {
     const prev = document.title;
     document.title = "Admin";
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    let created = false;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "robots");
+      document.head.appendChild(meta);
+      created = true;
+    }
+    const prevContent = meta.getAttribute("content");
+    meta.setAttribute("content", "noindex, nofollow");
+
     let cancelled = false;
-    fetchTestimonials()
-      .then((data) => {
+    void (async () => {
+      try {
+        const ok = await checkAdminSession();
+        if (cancelled) return;
+        if (!ok) {
+          setAuthed(false);
+          setLoading(false);
+          return;
+        }
+        setAuthed(true);
+        const data = await fetchTestimonials();
         if (!cancelled) setItems(data);
-      })
-      .catch(() => {
-        if (!cancelled)
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 401) {
+          setAuthed(false);
+        } else {
+          setAuthed(null);
           setError("Couldn't load testimonials. Check your connection and try again.");
-      })
-      .finally(() => {
+        }
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
       document.title = prev;
+      if (created) {
+        meta.remove();
+      } else if (prevContent !== null) {
+        meta.setAttribute("content", prevContent);
+      } else {
+        meta.removeAttribute("content");
+      }
     };
   }, []);
 
@@ -126,6 +195,45 @@ export default function AdminPage() {
     [items, tab]
   );
 
+  const handleLogin = (e: FormEvent) => {
+    e.preventDefault();
+    if (password.length === 0 || loginBusy) return;
+    setLoginBusy(true);
+    setLoginError(null);
+    void (async () => {
+      try {
+        await adminLogin(password);
+        setPassword("");
+        setAuthed(true);
+        await load();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          setLoginError("Incorrect password. Please try again.");
+        } else if (err instanceof ApiError && err.status === 429) {
+          setLoginError("Too many attempts. Please wait a minute and try again.");
+        } else {
+          setLoginError("Couldn't sign in. Check your connection and try again.");
+        }
+      } finally {
+        setLoginBusy(false);
+      }
+    })();
+  };
+
+  const handleLogout = () => {
+    void (async () => {
+      try {
+        await adminLogout();
+      } catch {
+        // Cookie cleanup is best-effort; the gate below applies regardless.
+      }
+      setAuthed(false);
+      setItems([]);
+      setPassword("");
+      setLoginError(null);
+    })();
+  };
+
   const runStatusChange = async (
     id: string,
     next: TestimonialStatus
@@ -133,15 +241,22 @@ export default function AdminPage() {
     setActionId(id);
     setActionError(null);
     try {
-      // ADMIN WRITE: in production this must hit a backend endpoint
-      // that verifies the admin session server-side.
-      const updated = await updateTestimonialStatus(id, next, adminCtx);
+      // Server verifies the admin session cookie before applying.
+      const updated = await updateTestimonialStatus(id, next);
       setItems((prev) =>
         prev.map((t) => (t.id === id ? updated : t))
       );
       setConfirm(null);
-    } catch {
-      setActionError("Couldn't save that change. Please try again.");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setAuthed(false);
+        setItems([]);
+      } else if (err instanceof ApiError && err.status === 404) {
+        setActionError("That testimonial no longer exists. Reloading…");
+        await load();
+      } else {
+        setActionError("Couldn't save that change. Please try again.");
+      }
     } finally {
       setActionId(null);
     }
@@ -162,23 +277,70 @@ export default function AdminPage() {
     },
   };
 
+  /* ── Not authenticated: password form, never the dashboard ── */
+  if (authed === false) {
+    return (
+      <main className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased min-h-screen">
+        <div className="max-w-5xl mx-auto px-6 pt-8 pb-20">
+          <TopRow />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-sm mx-auto mt-16 p-8 rounded-2xl bg-white dark:bg-gray-950 shadow-sm border border-green-100/80 dark:border-green-900"
+          >
+            <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-widest uppercase mb-2">
+              {"// admin"}
+            </p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Admin sign in
+            </h1>
+            <p className="text-gray-400 text-sm leading-relaxed mb-6">
+              This area is private. Enter the admin password to continue.
+            </p>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="admin-password"
+                  className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2"
+                >
+                  Password
+                </label>
+                <input
+                  id="admin-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  autoComplete="current-password"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-[15px] placeholder:text-gray-300 dark:placeholder:text-gray-600 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 transition"
+                />
+              </div>
+              {loginError && (
+                <p className="text-xs font-mono text-red-500 dark:text-red-400" role="alert">
+                  {loginError}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={loginBusy || password.length === 0}
+                className="w-full px-5 py-3 rounded-full bg-green-600 dark:bg-green-600 text-white text-sm font-semibold hover:bg-green-700 dark:hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-50"
+              >
+                {loginBusy ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
   return (
     <main className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased min-h-screen">
       <div className="max-w-5xl mx-auto px-6 pt-8 pb-20">
-        {/* Minimal top row — back link + logo mark (not the public navbar) */}
-        <div className="flex items-center justify-between mb-10">
-          <a
-            href="/"
-            className="text-xs font-mono text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-          >
-            ← Back to portfolio
-          </a>
-          <a href="/" className="font-mono text-lg tracking-tight">
-            <span className="text-green-500 dark:text-green-400">{"<"}</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">Peter</span>
-            <span className="text-green-500 dark:text-green-400">{" />"}</span>
-          </a>
-        </div>
+        <TopRow />
 
         {/* Header */}
         <motion.div
@@ -198,13 +360,21 @@ export default function AdminPage() {
               Review and manage client feedback.
             </p>
           </div>
-          <span
-            className="inline-flex self-start sm:self-auto items-center text-xs font-mono text-green-700 dark:text-green-400 bg-green-50 dark:bg-gray-900 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-900"
-            aria-live="polite"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-green-400 mr-2" />
-            {counts.pending} Pending
-          </span>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <span
+              className="inline-flex items-center text-xs font-mono text-green-700 dark:text-green-400 bg-green-50 dark:bg-gray-900 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-900"
+              aria-live="polite"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-green-400 mr-2" />
+              {counts.pending} Pending
+            </span>
+            <button
+              onClick={handleLogout}
+              className="text-xs font-mono text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </motion.div>
 
         {/* Tabs */}
@@ -436,7 +606,7 @@ export default function AdminPage() {
         )}
 
         <p className="mt-10 text-center text-xs font-mono text-gray-300">
-          {"/* private — admin actions require server authorization in production */"}
+          {"/* private — admin session verified server-side on every request */"}
         </p>
       </div>
       <Footer />

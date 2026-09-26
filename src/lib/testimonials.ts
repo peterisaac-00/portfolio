@@ -1,31 +1,21 @@
 /* ────────────────────────────────────────────
-   TESTIMONIALS DATA LAYER
-   No backend exists in this project yet (Vite + React SPA,
-   no API routes, no DB, no auth). This file is the single
-   source of truth for the testimonial shape so the feedback
-   page, the public portfolio, and /admin all share one model
-   instead of drifting into duplicates.
+   TESTIMONIALS DATA LAYER — thin fetch client over the
+   shared backend (Vercel Serverless Functions + Postgres).
+   This file is the single source of truth for the
+   testimonial shape so the feedback page, the public
+   portfolio, and /admin all share one model.
 
-   STORAGE: submissions from /feedback are persisted to
-   localStorage, so they survive reloads and appear on /admin
-   (plain <a> navigation between routes is a full page load,
-   which is why an in-memory store alone would lose them).
-   New entries always start as "pending" for admin review.
-   Swap the functions below for real API calls once a backend
-   exists.
+   STORAGE: shared Postgres table `testimonials` — a
+   submission from a client's device on /feedback is
+   visible on the admin's own device on /admin. No
+   localStorage anywhere in this file.
 
-   SECURITY — read before wiring a real backend:
-   - There is NO auth in this repo. The `updateTestimonialStatus`
-     function below is a FRONTEND-ONLY stand-in so the /admin UI
-     can be built and reviewed. It is NOT a security boundary.
-   - In production, approve/reject/unpublish MUST be a backend
-     endpoint (e.g. POST /api/testimonials/:id/status) that
-     verifies an HttpOnly session cookie / server-side role
-     check. The frontend must never decide authorization.
-   - NEVER put admin passwords, secret keys, API keys, or DB
-     credentials in frontend code. This file contains none —
-     the "admin session" below is only a local UI flag, not a
-     credential, and must be replaced by real server auth.
+   SECURITY:
+   - Admin endpoints send the HttpOnly session cookie
+     (credentials: "include") and the SERVER verifies it.
+     There is deliberately no admin logic in the browser.
+   - No passwords, secrets, or connection strings here —
+     those live in Vercel environment variables only.
    ──────────────────────────────────────────── */
 
 export type TestimonialStatus = "pending" | "approved" | "rejected";
@@ -34,9 +24,9 @@ export interface Testimonial {
   id: string;
   name: string;
   company?: string;
-  /** Initials (e.g. "WA"). Rendered as a local circle avatar so no
-      external image host is needed (index.html CSP only allows
-      img-src 'self' data:). */
+  /** Initials (e.g. "WA"), computed server-side. Rendered as
+      a local circle avatar so no external image host is needed
+      (index.html CSP only allows img-src 'self' data:). */
   avatar: string;
   overallRating: number;
   professionalismRating: number;
@@ -48,8 +38,8 @@ export interface Testimonial {
   createdAt: string; // ISO date string
 }
 
-/** Input accepted from the /feedback form (no id/status — those are
-    assigned here so every entry starts as "pending"). */
+/** Input accepted from the /feedback form (no id/status — the
+    server assigns those so every entry starts as "pending"). */
 export interface NewTestimonialInput {
   name: string;
   company?: string;
@@ -61,133 +51,129 @@ export interface NewTestimonialInput {
   message: string;
 }
 
-/* localStorage-backed store. Starts empty — no dummy data.
-   Every mutation persists, every read re-loads (cheap, and keeps
-   separate tabs/routes in sync). Falls back to memory only when
-   storage is unavailable (e.g. private mode). */
-const STORAGE_KEY = "portfolio.testimonials.v1";
+/** Thrown for non-2xx API responses. `status` lets callers
+    distinguish 401 (show login) from other failures. */
+export class ApiError extends Error {
+  status: number;
 
-function isTestimonial(v: unknown): v is Testimonial {
-  if (typeof v !== "object" || v === null) return false;
-  const t = v as Record<string, unknown>;
-  return (
-    typeof t.id === "string" &&
-    typeof t.name === "string" &&
-    typeof t.message === "string" &&
-    (t.status === "pending" ||
-      t.status === "approved" ||
-      t.status === "rejected") &&
-    typeof t.overallRating === "number" &&
-    typeof t.professionalismRating === "number" &&
-    typeof t.qualityRating === "number" &&
-    typeof t.communicationRating === "number" &&
-    typeof t.recommend === "boolean" &&
-    typeof t.createdAt === "string" &&
-    typeof t.avatar === "string"
-  );
-}
-
-function loadStore(): Testimonial[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isTestimonial);
-  } catch {
-    return [];
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
   }
 }
 
-let store: Testimonial[] = loadStore();
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
 
-function persist() {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    res = await fetch(path, init);
   } catch {
-    /* Storage unavailable — entries live in memory for this page
-       load only. */
+    throw new ApiError(0, "Network error. Check your connection and try again.");
   }
+  let data: unknown = undefined;
+  try {
+    data = await res.json();
+  } catch {
+    data = undefined;
+  }
+  if (!res.ok) {
+    const message =
+      isRecord(data) && typeof data.error === "string"
+        ? data.error
+        : "Request failed. Please try again.";
+    throw new ApiError(res.status, message);
+  }
+  return data as T;
 }
 
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-/** Public read — used by /admin (and any future public section). */
-export async function fetchTestimonials(): Promise<Testimonial[]> {
-  await delay(450); // simulate network
-  store = loadStore();
-  return store.map((t) => ({ ...t }));
+/** Admin read — all testimonials regardless of status.
+    Requires a valid admin session cookie (401 otherwise). */
+export function fetchTestimonials(): Promise<Testimonial[]> {
+  return request<Testimonial[]>("/api/testimonials", {
+    credentials: "include",
+  });
 }
 
-/** Public write — used by /feedback. Always starts as "pending". */
-export async function submitTestimonial(
+/** Public write — used by /feedback. The server validates
+    and always stores the entry as "pending". */
+export function submitTestimonial(
   input: NewTestimonialInput
 ): Promise<Testimonial> {
-  await delay(450); // simulate network
-  const name = input.name.trim();
-  const item: Testimonial = {
-    id: `t-${Date.now().toString(36)}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`,
-    name,
-    company: input.company?.trim() || undefined,
-    avatar: initials(name),
-    overallRating: input.overallRating,
-    professionalismRating: input.professionalismRating,
-    qualityRating: input.qualityRating,
-    communicationRating: input.communicationRating,
-    recommend: input.recommend,
-    message: input.message.trim(),
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
-  store = loadStore();
-  store = [item, ...store];
-  persist();
-  return { ...item };
-}
-
-/* ── ADMIN-ONLY — must move behind server auth in production ── */
-
-export interface AdminContext {
-  /** Placeholder flag only. A real implementation passes a session
-      cookie (credentials: "include") and the SERVER verifies it. */
-  adminSession: boolean;
-}
-
-/** Local UI flag — NOT a credential. Replace with real login flow. */
-export function acquireLocalAdminSession(): AdminContext {
-  return { adminSession: true };
-}
-
-function requireAdmin(ctx: AdminContext) {
-  if (!ctx.adminSession) {
-    throw new Error("Not authorized. Admin session required.");
-  }
+  return request<Testimonial>("/api/testimonials", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }
 
 /**
  * Admin write — approve / reject / unpublish.
- * PRODUCTION: replace body with fetch() to your backend endpoint
- * that enforces authorization server-side. Keep this function as
- * the only place admin writes go through.
+ * Authorization is enforced server-side via the session
+ * cookie; the browser only forwards the request.
  */
-export async function updateTestimonialStatus(
+export function updateTestimonialStatus(
   id: string,
-  status: TestimonialStatus,
-  ctx: AdminContext
+  status: TestimonialStatus
 ): Promise<Testimonial> {
-  requireAdmin(ctx);
-  await delay(400); // simulate network
-  store = loadStore();
-  const item = store.find((t) => t.id === id);
-  if (!item) throw new Error("Testimonial not found.");
-  item.status = status;
-  persist();
-  return { ...item };
+  return request<Testimonial>(
+    "/api/testimonials/" + encodeURIComponent(id) + "/status",
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    }
+  );
 }
 
-/* ── PUBLIC SELECTOR — the only data the portfolio may consume ── */
+/** Public read — only approved testimonials. Used by the
+    main site's Testimonials section. */
+export function fetchApprovedTestimonials(): Promise<Testimonial[]> {
+  return request<Testimonial[]>("/api/testimonials/approved");
+}
+
+/* ── Admin session ── */
+
+/** True when the session cookie is valid, false on 401.
+    Other failures throw so callers can show an error. */
+export async function checkAdminSession(): Promise<boolean> {
+  try {
+    await request<{ authenticated: boolean }>("/api/admin/session", {
+      credentials: "include",
+    });
+    return true;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return false;
+    throw err;
+  }
+}
+
+/** Log in with the admin password. Throws ApiError (401 for a
+    wrong password, 429 when rate-limited). */
+export async function adminLogin(password: string): Promise<void> {
+  await request<{ ok: boolean }>("/api/admin/login", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+}
+
+/** Sign out — clears the session cookie server-side. */
+export async function adminLogout(): Promise<void> {
+  await request<{ ok: boolean }>("/api/admin/session", {
+    method: "DELETE",
+    credentials: "include",
+  });
+}
+
+/* ── PUBLIC SELECTOR — extra client-side guard so only
+      approved testimonials can ever render publicly,
+      even if a response were tampered with. ── */
 
 /** Only approved testimonials may ever appear publicly. */
 export function getApprovedTestimonials(

@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";
+import {
+  fetchApprovedTestimonials,
+  getApprovedTestimonials,
+  type Testimonial,
+} from "../lib/testimonials";
 
 /* ────────────────────────────────────────────
    Client testimonial spotlight — public display card
    on the main single-scrolling page, between Projects
    and Contact.
 
-   Typed data object so entries are easy to swap or add
-   later (only one exists for now — no grid, no carousel).
-   Read-only: overall rating only (the four category
-   ratings stay private for Peter's review), recommend
-   badge when applicable, no buttons/links/CTAs.
+   Data comes from the shared backend (GET
+   /api/testimonials/approved) — only entries Peter has
+   approved are ever shown. If none exist yet the section
+   renders nothing. Read-only: overall rating only (the
+   four category ratings stay private for Peter's review),
+   recommend badge when applicable, no buttons/links/CTAs.
 
    Same green-dot-morphs-into-a-card mechanic and same
    tokens (var(--surface), --border, --text-*, --accent-
@@ -32,19 +38,19 @@ export interface ClientTestimonial {
   message: string;
 }
 
-export const TESTIMONIALS: ClientTestimonial[] = [
-  {
-    name: "Sarah Mitchell",
-    company: "Product Manager, TechFlow",
-    overall: 5,
-    professionalism: 5,
-    quality: 5,
-    communication: 5,
-    recommend: true,
-    message:
-      "Peter took our unstable API and turned it into something we never have to think about. Clear communication throughout, solid architecture underneath, and exactly what was promised on delivery.",
-  },
-];
+/* Display model → API model mapping (single spotlight entry). */
+function toClientTestimonial(t: Testimonial): ClientTestimonial {
+  return {
+    name: t.name,
+    company: t.company ?? "",
+    overall: t.overallRating,
+    professionalism: t.professionalismRating,
+    quality: t.qualityRating,
+    communication: t.communicationRating,
+    recommend: t.recommend,
+    message: t.message,
+  };
+}
 
 /* Dot presence before morph (spec: ~600–800ms). */
 const EXPAND_DELAY_MS = 700;
@@ -151,12 +157,14 @@ function TestimonialCard({ t }: { t: ClientTestimonial }) {
         >
           {t.name}
         </p>
-        <p
-          className="text-center text-sm mt-1"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          {t.company}
-        </p>
+        {t.company.length > 0 && (
+          <p
+            className="text-center text-sm mt-1"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {t.company}
+          </p>
+        )}
       </Reveal>
 
       <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S + 0.2}>
@@ -206,17 +214,46 @@ export default function Testimonials() {
   /* Fires once at ~45% section visibility; never replays. */
   const inView = useInView(sectionRef, { once: true, amount: 0.45 });
   const [expanded, setExpanded] = useState(false);
+  const [testimonial, setTestimonial] = useState<ClientTestimonial | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  /* Dot presence, then morph to card. */
+  /* Approved entries from the shared backend. Fails silently —
+     a public section must never break the page. */
   useEffect(() => {
-    if (!inView || reduceMotion || expanded) return;
+    let cancelled = false;
+    fetchApprovedTestimonials()
+      .then((items) => {
+        if (cancelled) return;
+        const first = getApprovedTestimonials(items)[0];
+        setTestimonial(first ? toClientTestimonial(first) : null);
+      })
+      .catch(() => {
+        if (!cancelled) setTestimonial(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* Dot presence, then morph to card — only once approved
+     data is available to display. */
+  useEffect(() => {
+    if (!inView || !testimonial || reduceMotion || expanded) return;
     const t = setTimeout(() => setExpanded(true), EXPAND_DELAY_MS);
     return () => clearTimeout(t);
-  }, [inView, reduceMotion, expanded]);
+  }, [inView, testimonial, reduceMotion, expanded]);
 
-  const showDot = inView && !reduceMotion && !expanded;
-  const showCard = inView && (reduceMotion || expanded);
-  const testimonial = TESTIMONIALS[0];
+  /* Nothing approved (or fetch failed) → no section at all. */
+  if (loaded && !testimonial) return null;
+
+  const showDot = inView && testimonial && !reduceMotion && !expanded;
+  /* Narrowed once for the JSX below — non-null exactly when
+     the card should render. */
+  const cardData: ClientTestimonial | null =
+    testimonial && (reduceMotion || expanded) ? testimonial : null;
 
   return (
     <section
@@ -258,6 +295,7 @@ export default function Testimonials() {
               ease: "easeOut",
             }}
             style={{
+              willChange: "transform, border-radius, background-color",
               width: 12,
               height: 12,
               borderRadius: "50%",
@@ -268,7 +306,7 @@ export default function Testimonials() {
           />
         )}
 
-        {showCard &&
+        {cardData &&
           (reduceMotion ? (
             /* Reduced motion — fade the finished card in. */
             <motion.div
@@ -286,7 +324,7 @@ export default function Testimonials() {
                 boxShadow: CARD_SHADOW,
               }}
             >
-              <TestimonialCard t={testimonial} />
+              <TestimonialCard t={cardData} />
             </motion.div>
           ) : (
             /* Phase 2 — the same element, morphed: 12px circle
@@ -307,12 +345,13 @@ export default function Testimonials() {
               transition={MORPH_TRANSITION}
               className="w-full px-6 py-10 sm:px-12"
               style={{
+                willChange: "transform, border-radius, background-color",
                 maxWidth: 760,
                 border: "1px solid var(--border)",
                 boxShadow: CARD_SHADOW,
               }}
             >
-              <TestimonialCard t={testimonial} />
+              <TestimonialCard t={cardData} />
             </motion.div>
           ))}
       </div>

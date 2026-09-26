@@ -246,11 +246,34 @@ export default function FeedbackPage() {
     };
   }, []);
 
-  /* Dot presence (~750ms incl. pulse) then morph to card. */
+  /* Dot presence (~750ms incl. pulse) then morph to card.
+     The timer only starts once fonts are ready AND the browser
+     has committed an idle frame, so the morph never starts
+     mid-font-swap or mid-paint on a fresh page load. */
   useEffect(() => {
     if (reduceMotion || expanded) return;
-    const t = setTimeout(() => setExpanded(true), EXPAND_DELAY_MS);
-    return () => clearTimeout(t);
+    let cancelled = false;
+    let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+    const start = () => {
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        const t = setTimeout(
+          () => !cancelled && setExpanded(true),
+          EXPAND_DELAY_MS
+        );
+        cleanupTimer = t;
+      });
+    };
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(start);
+    } else {
+      start();
+    }
+    return () => {
+      cancelled = true;
+      if (cleanupTimer) clearTimeout(cleanupTimer);
+    };
   }, [reduceMotion, expanded]);
 
   /* Move focus into the card once the entrance completes. */
@@ -806,6 +829,7 @@ export default function FeedbackPage() {
             animate={{ opacity: 1, scale: [0, 1, 1.25, 1] }}
             transition={{ duration: 0.7, times: [0, 0.4, 0.7, 1], ease: "easeOut" }}
             style={{
+              willChange: "transform, border-radius, background-color",
               width: 12,
               height: 12,
               borderRadius: "50%",
@@ -852,6 +876,7 @@ export default function FeedbackPage() {
             transition={MORPH_TRANSITION}
             className="w-full p-6 sm:p-10"
             style={{
+              willChange: "transform, border-radius, background-color",
               maxWidth: 640,
               border: "1px solid var(--border)",
               boxShadow:
