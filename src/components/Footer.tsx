@@ -35,7 +35,14 @@ export const socials = [
    Logo + quick nav + socials, copyright centered below.
    ──────────────────────────────────────────── */
 export default function Footer() {
-  const footerLinks = ["home", "about", "skills", "projects", "contact"];
+  const footerLinks = [
+    "home",
+    "about",
+    "skills",
+    "projects",
+    "testimonials",
+    "contact",
+  ];
 
   return (
     <motion.footer

@@ -257,9 +257,10 @@ export default function Testimonials() {
     return (
       <section
         ref={sectionRef}
+        id="testimonials"
         aria-label="Client testimonial"
         className="relative py-28 overflow-hidden"
-        style={{ backgroundColor: "var(--page-bg)" }}
+        style={{ backgroundColor: "var(--page-bg)", scrollMarginTop: "72px" }}
       >
         <h2 className="sr-only">Client testimonial</h2>
 
@@ -397,12 +398,13 @@ export default function Testimonials() {
   return (
     <section
       ref={sectionRef}
+      id="testimonials"
       aria-label="Client testimonial"
       className="relative py-28 overflow-hidden"
-      style={{ backgroundColor: "var(--page-bg)" }}
+      style={{ backgroundColor: "var(--page-bg)", scrollMarginTop: "72px" }}
     >
       {/* Screen-reader heading so the section announces as a
-          distinct landmark; visual design stays pure card. */}
+           distinct landmark; visual design stays pure card. */}
       <h2 className="sr-only">Client testimonial</h2>
 
       {/* Faint spotlight glow (decorative). */}

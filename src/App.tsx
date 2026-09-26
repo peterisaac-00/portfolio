@@ -207,7 +207,14 @@ function Navigation() {
     return () => obs.disconnect();
   }, []);
 
-  const links = ["home", "about", "skills", "projects", "contact"];
+  const links = [
+    "home",
+    "about",
+    "skills",
+    "projects",
+    "testimonials",
+    "contact",
+  ];
 
   return (
     <motion.nav
