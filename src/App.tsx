@@ -52,6 +52,11 @@ function useTextScramble(text: string, shouldStart: boolean): string {
    ──────────────────────────────────────────── */
 function NetworkCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const reduceMotion = useReducedMotion();
+  // Tracks whether the rAF loop is currently scheduled, so the resize
+  // handler and observers never restart a paused loop by accident.
+  const runningRef = useRef(false);
+  const inViewRef = useRef(true);
 
   useEffect(() => {
     const cvs = canvasRef.current;
@@ -59,12 +64,12 @@ function NetworkCanvas() {
     const ctx = cvs.getContext("2d");
     if (!ctx) return;
 
-    let raf: number;
     const COUNT = 45;
     const LINK = 140;
 
     type P = { x: number; y: number; vx: number; vy: number };
     let particles: P[] = [];
+    let raf: number | undefined;
 
     const resize = () => {
       cvs.width = cvs.offsetWidth * devicePixelRatio;
@@ -84,7 +89,8 @@ function NetworkCanvas() {
       }));
     };
 
-    const draw = () => {
+    // Single frame paint — identical visuals, no scheduling.
+    const paint = () => {
       const w = cvs.offsetWidth;
       const h = cvs.offsetHeight;
       ctx.clearRect(0, 0, w, h);
@@ -116,17 +122,69 @@ function NetworkCanvas() {
           }
         }
       }
+    };
+
+    const draw = () => {
+      if (!runningRef.current) return;
+      paint();
       raf = requestAnimationFrame(draw);
     };
 
-    seed();
-    draw();
-    window.addEventListener("resize", seed);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", seed);
+    const start = () => {
+      if (runningRef.current || reduceMotion) return;
+      if (!inViewRef.current || document.hidden) return;
+      runningRef.current = true;
+      raf = requestAnimationFrame(draw);
     };
-  }, []);
+
+    const stop = () => {
+      runningRef.current = false;
+      if (raf !== undefined) cancelAnimationFrame(raf);
+      raf = undefined;
+    };
+
+    seed();
+
+    if (reduceMotion) {
+      // Static single frame only — no animation loop.
+      paint();
+    } else {
+      start();
+    }
+
+    const onResize = () => {
+      // Re-fit the backing store + re-seed positions only.
+      // Deliberately does NOT restart the loop when paused.
+      seed();
+      if (reduceMotion) paint();
+    };
+
+    // Pause when the hero scrolls out of view; resume on return.
+    const target = cvs.closest("section") ?? cvs.parentElement ?? cvs;
+    const io = new IntersectionObserver(
+      (entries) => {
+        inViewRef.current = entries[0]?.isIntersecting ?? true;
+        if (inViewRef.current) start();
+        else stop();
+      },
+      { threshold: 0 }
+    );
+    io.observe(target);
+
+    // Safety net: whole tab backgrounded while canvas still "visible".
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("resize", onResize);
+    return () => {
+      stop();
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [reduceMotion]);
 
   return (
     <canvas
@@ -287,31 +345,34 @@ function Navigation() {
         </button>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu — grid-rows 0fr→1fr avoids Framer Motion's
+          expensive "auto" height measurement; same 0.3s timing. */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ gridTemplateRows: "0fr", opacity: 0 }}
+            animate={{ gridTemplateRows: "1fr", opacity: 1 }}
+            exit={{ gridTemplateRows: "0fr", opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden overflow-hidden bg-white/95 dark:bg-gray-950/95 backdrop-blur-lg border-t border-green-100 dark:border-green-900"
+            className="md:hidden grid overflow-hidden bg-white/95 dark:bg-gray-950/95 backdrop-blur-lg border-t border-green-100 dark:border-green-900"
           >
-            <div className="flex flex-col gap-1 px-6 py-4">
-              {links.map((l) => (
-                <a
-                  key={l}
-                  href={`#${l}`}
-                  onClick={() => setMenuOpen(false)}
-                  className={`py-2 text-sm uppercase tracking-widest font-medium ${
-                    active === l
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-gray-400"
-                  }`}
-                >
-                  {l}
-                </a>
-              ))}
+            <div className="overflow-hidden min-h-0">
+              <div className="flex flex-col gap-1 px-6 py-4">
+                {links.map((l) => (
+                  <a
+                    key={l}
+                    href={`#${l}`}
+                    onClick={() => setMenuOpen(false)}
+                    className={`py-2 text-sm uppercase tracking-widest font-medium ${
+                      active === l
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {l}
+                  </a>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
@@ -375,11 +436,13 @@ function Hero() {
           {scrambledName}
         </motion.h1>
 
-        {/* Animated gradient underline */}
+        {/* Animated gradient underline — scaleX (composited) instead of
+            width (layout); same delay/duration/easing, same 180px final. */}
         <motion.div
-          className="mx-auto mt-3 h-[3px] rounded-full bg-gradient-to-r from-green-300 via-green-500 to-emerald-400 animate-gradient"
-          initial={{ width: 0 }}
-          animate={{ width: 180 }}
+          className="mx-auto mt-3 h-[3px] w-[180px] rounded-full bg-gradient-to-r from-green-300 via-green-500 to-emerald-400 animate-gradient"
+          style={{ transformOrigin: "left" }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
           transition={{ delay: 0.7, duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
         />
 
@@ -978,11 +1041,16 @@ function ProjectModal({
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-6 space-y-6">
-          {/* Main image */}
+          {/* Main image — CSS (w-full + fixed h-*) already reserves the
+              box; width/height attrs only prevent reflow before CSS paints. */}
           <div className="rounded-2xl overflow-hidden border border-white/[0.06]">
             <img
               src={project.image}
               alt={project.name}
+              loading="lazy"
+              decoding="async"
+              width={832}
+              height={256}
               className="w-full h-48 sm:h-64 object-cover"
             />
           </div>
@@ -1003,6 +1071,10 @@ function ProjectModal({
                   <img
                     src={img}
                     alt={`${project.name} screenshot ${i + 1}`}
+                    loading="lazy"
+                    decoding="async"
+                    width={400}
+                    height={192}
                     className="w-full h-40 sm:h-48 object-cover"
                   />
                 </div>
@@ -1111,8 +1183,8 @@ function Projects() {
           <div className="grid sm:grid-cols-2 gap-5">
             {projects.map((p, i) => (
 <motion.article
-                 key={p.name}
-                 className="group relative p-5 pb-6 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.07] hover:bg-white/[0.08] hover:border-green-400/20 transition-all duration-500 cursor-pointer"
+                  key={p.name}
+                  className="group relative p-5 pb-6 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.07] hover:bg-white/[0.08] hover:border-green-400/20 transition-[background-color,border-color] duration-500 cursor-pointer"
                  initial={{ opacity: 0, y: 30 }}
                  animate={inView ? { opacity: 1, y: 0 } : {}}
                  transition={{ duration: 0.6, delay: i * 0.12 }}
@@ -1121,13 +1193,17 @@ function Projects() {
                >
                  <div className="flex gap-4">
                    {/* Project image */}
-                   <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-white/[0.06]">
-                     <img
-                       src={p.image}
-                       alt={p.name}
-                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                     />
-                   </div>
+                    <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-white/[0.06]">
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        loading="lazy"
+                        decoding="async"
+                        width={112}
+                        height={112}
+                        className="w-full h-full object-cover aspect-square group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
 
                    {/* Text content */}
                    <div className="flex-1 min-w-0">
