@@ -1,23 +1,34 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import Footer from "../components/Footer";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { submitTestimonial } from "../lib/testimonials";
 
 /* ────────────────────────────────────────────
-   /feedback — client-facing feedback form.
-   Submitting validates locally, saves the entry as "pending"
-   via the shared testimonials store (localStorage-backed, so
-   it appears on /admin for review), then shows the local
-   success state. Local form state starts empty.
-   Reuses the portfolio's existing tokens: Inter +
-   JetBrains Mono, green-600 primary CTA, green-200
-   borders, rounded-full pills/buttons, rounded-2xl
-   cards, max-w centered px-6 layout, subtle
-   fade/slide motion. NOT in the public navbar.
+   /feedback — private, unlisted client feedback page.
+   NOT linked from the navbar, homepage, Testimonials
+   section, or any other page. No public entry point:
+   clients receive this URL directly as a private link.
+   No site navbar/footer — just the entrance animation
+   and the form card, centered on the page.
+
+   Entrance: a small green dot fades/scales in, pulses
+   once, then morphs (shared layoutId — the dot IS the
+   card) into the full form card. Inner content fades in
+   after the box is ~80% grown so text never squishes.
+   prefers-reduced-motion skips the morph entirely.
    ──────────────────────────────────────────── */
 
 const MESSAGE_MAX = 1000;
-const MESSAGE_MIN = 10;
+const MESSAGE_WARN_AT = 900;
+/* Dot presence before morph (spec: ~600–800ms). */
+const EXPAND_DELAY_MS = 750;
+/* Inner content waits until the box is ~80% grown. */
+const CONTENT_DELAY_S = 0.4;
+/* Smooth, confident spring — high damping, low bounce. */
+const MORPH_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 260,
+  damping: 32,
+};
 
 interface RatingQuestion {
   key: "overall" | "professionalism" | "quality" | "communication";
@@ -48,6 +59,39 @@ const RATING_QUESTIONS: RatingQuestion[] = [
   },
 ];
 
+/* ────────────────────────────────────────────
+   Reveal — inner content fade/slide. Staggered by the
+   caller (~100ms steps) so nothing renders mid-morph.
+   Renders statically when reduced motion is requested.
+   ──────────────────────────────────────────── */
+function Reveal({
+  delay,
+  children,
+}: {
+  delay: number;
+  children: React.ReactNode;
+}) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return <>{children}</>;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ────────────────────────────────────────────
+   StarRating — reusable (one component, 4 instances).
+   Interactive + keyboard accessible: Tab reaches the
+   group (roving tabindex), Arrow keys change the rating
+   and move focus, Enter/Space activates via the native
+   button. Each star announces e.g.
+   "Rate Professionalism 4 out of 5 stars".
+   ──────────────────────────────────────────── */
 function StarRating({
   value,
   onChange,
@@ -60,7 +104,32 @@ function StarRating({
   invalid: boolean;
 }) {
   const [hover, setHover] = useState(0);
+  const btnRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const shown = hover || value;
+
+  const focusStar = (s: number) => {
+    btnRefs.current[s - 1]?.focus();
+  };
+
+  const handleGroupKeyDown = (e: React.KeyboardEvent) => {
+    let next: number | null = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      next = value >= 5 ? 5 : value + 1;
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      next = value <= 1 ? (value === 0 ? 0 : 1) : value - 1;
+    } else if (e.key === "Home") {
+      next = 1;
+    } else if (e.key === "End") {
+      next = 5;
+    }
+    if (next !== null && next !== 0) {
+      e.preventDefault();
+      onChange(next);
+      focusStar(next);
+    } else if (next === 0) {
+      e.preventDefault();
+    }
+  };
 
   return (
     <div
@@ -69,27 +138,49 @@ function StarRating({
       aria-label={label}
       aria-invalid={invalid}
       onMouseLeave={() => setHover(0)}
+      onKeyDown={handleGroupKeyDown}
     >
-      {[1, 2, 3, 4, 5].map((s) => (
-        <button
-          key={s}
-          type="button"
-          role="radio"
-          aria-checked={value === s}
-          aria-label={`${s} star${s > 1 ? "s" : ""}`}
-          onMouseEnter={() => setHover(s)}
-          onFocus={() => setHover(s)}
-          onBlur={() => setHover(0)}
-          onClick={() => onChange(s)}
-          className="p-1.5 -m-1.5 text-2xl sm:text-[1.7rem] leading-none transition-all duration-150 hover:scale-110 active:scale-95"
-        >
-          <span className={s <= shown ? "text-green-500 dark:text-green-400" : "text-gray-200 dark:text-gray-700"}>
-            ★
-          </span>
-        </button>
-      ))}
+      {[1, 2, 3, 4, 5].map((s) => {
+        const filled = s <= shown;
+        /* Roving tabindex: the selected star (or star 1 when
+           unrated) is the single Tab stop; arrows move within. */
+        const tabStop = value === 0 ? s === 1 : value === s;
+        return (
+          <button
+            key={s}
+            ref={(el) => {
+              btnRefs.current[s - 1] = el;
+            }}
+            type="button"
+            role="radio"
+            aria-checked={value === s}
+            aria-label={`Rate ${label} ${s} out of 5 stars`}
+            tabIndex={tabStop ? 0 : -1}
+            onMouseEnter={() => setHover(s)}
+            onFocus={() => setHover(s)}
+            onBlur={() => setHover(0)}
+            onClick={() => onChange(s)}
+            className="p-1.5 -m-1.5 text-2xl sm:text-[1.7rem] leading-none transition-transform duration-150 hover:scale-110 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ outlineColor: "var(--accent-green)" }}
+          >
+            <span
+              aria-hidden="true"
+              style={
+                filled
+                  ? { color: "var(--accent-green)" }
+                  : { color: "var(--text-secondary)", opacity: 0.4 }
+              }
+            >
+              ★
+            </span>
+          </button>
+        );
+      })}
       {value > 0 && (
-        <span className="ml-2 text-xs font-mono text-gray-400">
+        <span
+          className="ml-2 text-xs font-mono"
+          style={{ color: "var(--text-secondary)" }}
+        >
           {value}/5
         </span>
       )}
@@ -97,8 +188,15 @@ function StarRating({
   );
 }
 
+type Recommend = "yes" | "unsure" | null;
+
 export default function FeedbackPage() {
-  // Form state — starts empty; submissions are saved as "pending".
+  const reduceMotion = useReducedMotion();
+  /* Entrance phase: false = green dot, true = full card.
+     Reduced motion starts expanded (plain fade instead). */
+  const [expanded, setExpanded] = useState(() => reduceMotion === true);
+  const [submitted, setSubmitted] = useState(false);
+
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [ratings, setRatings] = useState<Record<RatingQuestion["key"], number>>({
@@ -107,47 +205,129 @@ export default function FeedbackPage() {
     quality: 0,
     communication: 0,
   });
-  const [recommend, setRecommend] = useState<"yes" | "unsure" | null>(null);
+  const [recommend, setRecommend] = useState<Recommend>(null);
   const [message, setMessage] = useState("");
   const [permission, setPermission] = useState(false);
-  const [showErrors, setShowErrors] = useState(false);
+  const [touched, setTouched] = useState({
+    name: false,
+    ratings: false,
+    recommend: false,
+    message: false,
+    permission: false,
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submittedName, setSubmittedName] = useState("");
 
+  const cardTitleRef = useRef<HTMLHeadingElement>(null);
+  const successTitleRef = useRef<HTMLHeadingElement>(null);
+  const recommendYesRef = useRef<HTMLButtonElement>(null);
+  const recommendUnsureRef = useRef<HTMLButtonElement>(null);
+
+  /* Unlisted page: noindex/nofollow + descriptive title. */
   useEffect(() => {
-    const prev = document.title;
-    document.title = "feedback";
+    const prevTitle = document.title;
+    document.title = "Share Your Experience — Peter Isaac";
+    let meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="robots"]'
+    );
+    let created = false;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "robots";
+      document.head.appendChild(meta);
+      created = true;
+    }
+    const prevContent = meta.content;
+    meta.content = "noindex, nofollow";
     return () => {
-      document.title = prev;
+      document.title = prevTitle;
+      if (created) meta.remove();
+      else meta.content = prevContent;
     };
   }, []);
 
+  /* Dot presence (~750ms incl. pulse) then morph to card. */
+  useEffect(() => {
+    if (reduceMotion || expanded) return;
+    const t = setTimeout(() => setExpanded(true), EXPAND_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [reduceMotion, expanded]);
+
+  /* Move focus into the card once the entrance completes. */
+  useEffect(() => {
+    if (!expanded) return;
+    const delay = reduceMotion ? 150 : 650;
+    const t = setTimeout(() => {
+      (submitted ? successTitleRef : cardTitleRef).current?.focus({
+        preventScroll: true,
+      });
+    }, delay);
+    return () => clearTimeout(t);
+  }, [expanded, submitted, reduceMotion]);
+
+  /* Focus the success state when it replaces the form. */
+  useEffect(() => {
+    if (submitted) {
+      const t = setTimeout(
+        () => successTitleRef.current?.focus({ preventScroll: true }),
+        reduceMotion ? 50 : 350
+      );
+      return () => clearTimeout(t);
+    }
+  }, [submitted, reduceMotion]);
+
+  /* ── Validation (inline errors, no alert()) ── */
   const nameError =
     name.trim().length === 0 ? "Please enter your name." : null;
   const ratingsError = RATING_QUESTIONS.some((q) => ratings[q.key] === 0)
     ? "Please rate all four areas."
     : null;
-  const recommendError = recommend === null ? "Please choose an option." : null;
+  const recommendError =
+    recommend === null ? "Please choose an option." : null;
   const messageError =
     message.trim().length === 0
       ? "Please share a few words about your experience."
-      : message.trim().length < MESSAGE_MIN
-        ? `A little more detail helps (at least ${MESSAGE_MIN} characters).`
-        : null;
+      : null;
   const permissionError = !permission
     ? "Please confirm you're happy for your feedback to be displayed."
     : null;
 
-  const hasErrors = Boolean(
-    nameError || ratingsError || recommendError || messageError || permissionError
+  const isValid = !(
+    nameError ||
+    ratingsError ||
+    recommendError ||
+    messageError ||
+    permissionError
   );
+
+  const touch = (field: keyof typeof touched) =>
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
+
+  const setRating = (key: RatingQuestion["key"], v: number) => {
+    setRatings((prev) => ({ ...prev, [key]: v }));
+    touch("ratings");
+  };
+
+  const handleRecommendKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const next: Recommend = recommend === "yes" ? "unsure" : "yes";
+      setRecommend(next);
+      touch("recommend");
+      (next === "yes" ? recommendYesRef : recommendUnsureRef).current?.focus();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Validate locally, then save as "pending" so it appears on /admin.
-    if (hasErrors) {
-      setShowErrors(true);
+    if (!isValid || submitting) {
+      setTouched({
+        name: true,
+        ratings: true,
+        recommend: true,
+        message: true,
+        permission: true,
+      });
       return;
     }
     setSubmitting(true);
@@ -164,7 +344,7 @@ export default function FeedbackPage() {
           recommend: recommend === "yes",
           message: message.trim(),
         });
-        setSubmittedName(name.trim());
+        setSubmitted(true);
       } catch {
         setSubmitError("Couldn't submit your feedback. Please try again.");
       } finally {
@@ -173,121 +353,134 @@ export default function FeedbackPage() {
     })();
   };
 
-  if (submittedName) {
-    return (
-      <main className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased min-h-screen">
-        <div className="max-w-2xl mx-auto px-6 pt-16 pb-20 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-[0.3em] uppercase mb-6">
-              Peter Isaac
-            </p>
-            <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-              <svg
-                className="w-7 h-7 text-green-600 dark:text-green-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Thank you, {submittedName}!
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-[15px] leading-relaxed mb-2">
-              Your feedback has been submitted successfully.
-            </p>
-            <p className="text-gray-400 text-[15px] leading-relaxed mb-10">
-              I really appreciate you taking the time to share your experience.
-            </p>
-            <a
-              href="/"
-              className="inline-block px-6 py-3 rounded-full border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-300"
-            >
-              Back to Portfolio
-            </a>
-          </motion.div>
-        </div>
-        <Footer />
-      </main>
-    );
-  }
+  const messageCount = message.length;
+  const messageNearLimit = messageCount > MESSAGE_WARN_AT;
 
-  return (
-    <main className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased min-h-screen">
-      <div className="max-w-2xl mx-auto px-6 pt-8 pb-20">
-        {/* Minimal top row — same pattern as /admin, not the public navbar */}
-        <div className="flex items-center justify-between mb-10">
-          <a
-            href="/"
-            className="text-xs font-mono text-gray-400 hover:text-green-600 dark:text-green-400 dark:hover:text-green-400 transition-colors"
-          >
-            ← Back to portfolio
-          </a>
-          <a href="/" className="font-mono text-lg tracking-tight">
-            <span className="text-green-500 dark:text-green-400">{"<"}</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">Peter</span>
-            <span className="text-green-500 dark:text-green-400">{" />"}</span>
-          </a>
-        </div>
+  const errorStyle = {
+    color: "var(--error)",
+  } as const;
 
-        {/* Intro */}
+  /* ── Card body (form or success) ── */
+  const cardBody = submitted ? (
+    <div className="text-center py-6">
+      <Reveal delay={reduceMotion ? 0 : 0.1}>
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="mx-auto mb-6 flex items-center justify-center rounded-full"
+          style={{
+            width: 56,
+            height: 56,
+            backgroundColor: "var(--accent-green)",
+          }}
+          initial={reduceMotion ? { opacity: 0 } : { scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={
+            reduceMotion
+              ? { duration: 0.2 }
+              : { type: "spring", stiffness: 300, damping: 20, delay: 0.1 }
+          }
         >
-          <p className="text-xs font-mono text-green-500 dark:text-green-400 tracking-[0.3em] uppercase mb-4">
+          <svg
+            className="h-7 w-7"
+            style={{ color: "var(--surface)" }}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            aria-hidden="true"
+          >
+            <motion.path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={
+                reduceMotion ? { duration: 0 } : { duration: 0.4, delay: 0.3 }
+              }
+            />
+          </svg>
+        </motion.div>
+      </Reveal>
+      <Reveal delay={reduceMotion ? 0 : 0.2}>
+        <h1
+          ref={successTitleRef}
+          tabIndex={-1}
+          className="text-2xl sm:text-3xl font-bold outline-none"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Thanks for your feedback!
+        </h1>
+      </Reveal>
+      <Reveal delay={reduceMotion ? 0 : 0.3}>
+        <p
+          className="mt-3 text-[15px] leading-relaxed"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          Your feedback goes to review before appearing publicly.
+        </p>
+      </Reveal>
+    </div>
+  ) : (
+    <form noValidate onSubmit={handleSubmit} aria-label="Feedback form">
+      <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S}>
+        <div className="text-center mb-8">
+          <p
+            className="text-xs font-mono tracking-[0.3em] uppercase mb-3"
+            style={{ color: "var(--accent-green)" }}
+          >
             Peter Isaac
           </p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          <h1
+            ref={cardTitleRef}
+            tabIndex={-1}
+            className="text-3xl sm:text-4xl font-bold mb-3 outline-none"
+            style={{ color: "var(--text-primary)" }}
+          >
             Share Your Experience
           </h1>
-          <p className="text-gray-400 text-[15px] leading-relaxed max-w-md mx-auto">
+          <p
+            className="text-[15px] leading-relaxed max-w-md mx-auto"
+            style={{ color: "var(--text-secondary)" }}
+          >
             I&apos;d love to hear about your experience working with me. Your
             feedback helps me improve and helps future clients know what to
             expect.
           </p>
-        </motion.div>
+        </div>
+      </Reveal>
 
-        <motion.form
-          noValidate
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="space-y-10"
-        >
-          {/* Client info */}
-          <section className="space-y-5">
+      <div className="space-y-8">
+        {/* 1–2. Name + company */}
+        <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S + 0.1}>
+          <div className="space-y-5">
             <div>
               <label
                 htmlFor="fb-name"
-                className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2"
+                className="block text-sm font-semibold mb-2"
+                style={{ color: "var(--text-primary)" }}
               >
-                Your Name <span className="text-green-600 dark:text-green-400">*</span>
+                Your Name *
               </label>
               <input
                 id="fb-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={() => touch("name")}
                 placeholder="Enter your name"
-                aria-invalid={showErrors && Boolean(nameError)}
-                className="w-full px-4 py-3 rounded-xl border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-[15px] placeholder:text-gray-300 dark:placeholder:text-gray-600 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 transition"
+                required
+                aria-required="true"
+                aria-invalid={touched.name && Boolean(nameError)}
+                className="w-full px-4 py-3 rounded-xl text-[15px] transition focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: "var(--input-bg)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-primary)",
+                  ["--tw-ring-color" as string]: "var(--accent-green)",
+                }}
               />
-              {showErrors && nameError && (
-                <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
+              {touched.name && nameError && (
+                <p className="mt-2 text-xs font-mono" role="alert" style={errorStyle}>
                   {nameError}
                 </p>
               )}
@@ -295,65 +488,102 @@ export default function FeedbackPage() {
             <div>
               <label
                 htmlFor="fb-company"
-                className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2"
+                className="block text-sm font-semibold mb-2"
+                style={{ color: "var(--text-primary)" }}
               >
-                Company / Project{" "}
-                <span className="text-gray-300 font-normal">(optional)</span>
+                Company / Project (optional)
               </label>
               <input
                 id="fb-company"
                 type="text"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-                placeholder="Company or project name (optional)"
-                className="w-full px-4 py-3 rounded-xl border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-[15px] placeholder:text-gray-300 dark:placeholder:text-gray-600 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 transition"
+                placeholder="Company or project name"
+                className="w-full px-4 py-3 rounded-xl text-[15px] transition focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: "var(--input-bg)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-primary)",
+                  ["--tw-ring-color" as string]: "var(--accent-green)",
+                }}
               />
             </div>
-          </section>
+          </div>
+        </Reveal>
 
-          {/* Ratings */}
-          <section>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-              Your Ratings <span className="text-green-600 dark:text-green-400">*</span>
+        {/* 3. Ratings */}
+        <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S + 0.2}>
+          <div>
+            <h2
+              className="text-sm font-semibold mb-1"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Your Ratings *
             </h2>
-            <p className="text-sm text-gray-400 mb-5">
+            <p
+              className="text-sm mb-4"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Tap a star to rate each area.
             </p>
-            <div className="p-5 rounded-2xl bg-white dark:bg-gray-950 shadow-sm border border-green-100/80 dark:border-green-900 space-y-5">
+            <div
+              className="p-5 rounded-2xl space-y-5"
+              style={{
+                backgroundColor: "var(--surface)",
+                border: "1px solid var(--border)",
+              }}
+            >
               {RATING_QUESTIONS.map((q) => (
                 <div key={q.key}>
-                  <p className="text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-1">
+                  <p
+                    className="text-[11px] font-mono uppercase tracking-widest mb-1"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
                     {q.title}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{q.hint}</p>
+                  <p
+                    className="text-sm mb-2"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {q.hint}
+                  </p>
                   <StarRating
                     value={ratings[q.key]}
-                    onChange={(v) =>
-                      setRatings((prev) => ({ ...prev, [q.key]: v }))
-                    }
+                    onChange={(v) => setRating(q.key, v)}
                     label={q.title}
-                    invalid={showErrors && ratings[q.key] === 0}
+                    invalid={touched.ratings && ratings[q.key] === 0}
                   />
                 </div>
               ))}
             </div>
-            {showErrors && ratingsError && (
-              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
+            {touched.ratings && ratingsError && (
+              <p className="mt-2 text-xs font-mono" role="alert" style={errorStyle}>
                 {ratingsError}
               </p>
             )}
-          </section>
+          </div>
+        </Reveal>
 
-          {/* Recommendation */}
-          <section>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Would you recommend working with Peter?{" "}
-              <span className="text-green-600 dark:text-green-400">*</span>
+        {/* 4. Recommend toggle */}
+        <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S + 0.3}>
+          <div>
+            <h2
+              className="text-sm font-semibold mb-4"
+              style={{ color: "var(--text-primary)" }}
+              id="fb-recommend-label"
+            >
+              Would you recommend working with Peter? *
             </h2>
             <div
-              className="p-1 rounded-full border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 flex gap-1"
+              className="p-1 rounded-full flex gap-1"
               role="radiogroup"
-              aria-label="Would you recommend working with Peter?"
+              aria-labelledby="fb-recommend-label"
+              aria-invalid={touched.recommend && Boolean(recommendError)}
+              onKeyDown={handleRecommendKeyDown}
+              style={{
+                backgroundColor: "var(--input-bg)",
+                border: "1px solid var(--border)",
+              }}
             >
               {(
                 [
@@ -365,104 +595,273 @@ export default function FeedbackPage() {
                 return (
                   <button
                     key={opt.value}
+                    ref={opt.value === "yes" ? recommendYesRef : recommendUnsureRef}
                     type="button"
                     role="radio"
                     aria-checked={selected}
-                    onClick={() => setRecommend(opt.value)}
-                    className={`flex-1 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${
+                    onClick={() => {
+                      setRecommend(opt.value);
+                      touch("recommend");
+                    }}
+                    onBlur={() => touch("recommend")}
+                    className="flex-1 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                    style={
                       selected
-                        ? "bg-green-600 dark:bg-green-600 text-white shadow-lg shadow-green-600/20"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20"
-                    }`}
+                        ? {
+                            backgroundColor: "var(--accent-green)",
+                            color: "var(--surface)",
+                            outlineColor: "var(--accent-green)",
+                          }
+                        : {
+                            color: "var(--text-secondary)",
+                            outlineColor: "var(--accent-green)",
+                          }
+                    }
                   >
                     {opt.label}
                   </button>
                 );
               })}
             </div>
-            {showErrors && recommendError && (
-              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
+            {touched.recommend && recommendError && (
+              <p className="mt-2 text-xs font-mono" role="alert" style={errorStyle}>
                 {recommendError}
               </p>
             )}
-          </section>
+          </div>
+        </Reveal>
 
-          {/* Written feedback */}
-          <section>
+        {/* 5. Written feedback */}
+        <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S + 0.4}>
+          <div>
             <div className="flex items-baseline justify-between gap-3 mb-2">
               <label
                 htmlFor="fb-message"
-                className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+                className="text-sm font-semibold"
+                style={{ color: "var(--text-primary)" }}
               >
-                Tell me about your experience{" "}
-                <span className="text-green-600 dark:text-green-400">*</span>
+                Tell me about your experience *
               </label>
-              <span className="text-xs font-mono text-gray-300 shrink-0">
-                {message.length}/{MESSAGE_MAX}
+              <span
+                className="text-xs font-mono shrink-0"
+                aria-live="polite"
+                style={{
+                  color: messageNearLimit
+                    ? "var(--warning)"
+                    : "var(--text-secondary)",
+                }}
+              >
+                {messageCount}/{MESSAGE_MAX}
               </span>
             </div>
             <textarea
               id="fb-message"
               value={message}
-              onChange={(e) => setMessage(e.target.value.slice(0, MESSAGE_MAX))}
+              onChange={(e) =>
+                setMessage(e.target.value.slice(0, MESSAGE_MAX))
+              }
+              onBlur={() => touch("message")}
               placeholder="What did you enjoy about working with me? How was the process or final result?"
               rows={5}
-              aria-invalid={showErrors && Boolean(messageError)}
-              className="w-full px-4 py-3 rounded-2xl border border-green-200 dark:border-green-900 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-[15px] leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 transition resize-y min-h-32"
+              maxLength={MESSAGE_MAX}
+              required
+              aria-required="true"
+              aria-invalid={touched.message && Boolean(messageError)}
+              aria-describedby="fb-message-count"
+              className="w-full px-4 py-3 rounded-2xl text-[15px] leading-relaxed transition resize-y min-h-32 focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: "var(--input-bg)",
+                border: "1px solid var(--border)",
+                color: "var(--text-primary)",
+                ["--tw-ring-color" as string]: "var(--accent-green)",
+              }}
             />
-            {showErrors && messageError && (
-              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
+            <span id="fb-message-count" className="sr-only">
+              {messageCount} out of {MESSAGE_MAX} characters used
+            </span>
+            {touched.message && messageError && (
+              <p className="mt-2 text-xs font-mono" role="alert" style={errorStyle}>
                 {messageError}
               </p>
             )}
-          </section>
+          </div>
+        </Reveal>
 
-          {/* Permission */}
-          <section>
-            <label
-              htmlFor="fb-permission"
-              className="flex items-start gap-3 cursor-pointer"
-            >
+        {/* 6. Permission */}
+        <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S + 0.5}>
+          <div>
+            <label htmlFor="fb-permission" className="flex items-start gap-3 cursor-pointer">
               <input
                 id="fb-permission"
                 type="checkbox"
                 checked={permission}
-                onChange={(e) => setPermission(e.target.checked)}
-                className="mt-0.5 w-5 h-5 shrink-0 rounded-md border-green-300 dark:border-green-800 accent-green-600 cursor-pointer"
+                onChange={(e) => {
+                  setPermission(e.target.checked);
+                  touch("permission");
+                }}
+                onBlur={() => touch("permission")}
+                required
+                aria-required="true"
+                aria-invalid={touched.permission && Boolean(permissionError)}
+                className="mt-0.5 w-5 h-5 shrink-0 cursor-pointer"
+                style={{ accentColor: "var(--accent-green)" }}
               />
-              <span className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                I agree to have my feedback displayed on Peter&apos;s
-                portfolio. <span className="text-green-600 dark:text-green-400">*</span>
+              <span
+                className="text-sm leading-relaxed"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                I agree to have my feedback displayed on Peter&apos;s portfolio.
               </span>
             </label>
-            {showErrors && permissionError && (
-              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
+            {touched.permission && permissionError && (
+              <p className="mt-2 text-xs font-mono" role="alert" style={errorStyle}>
                 {permissionError}
               </p>
             )}
-          </section>
+          </div>
+        </Reveal>
 
-          {/* Submit */}
+        {/* 7–8. Submit + helper */}
+        <Reveal delay={reduceMotion ? 0 : CONTENT_DELAY_S + 0.6}>
           <div className="pt-2">
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full sm:w-auto px-8 py-3 rounded-full bg-green-600 dark:bg-green-600 text-white text-sm font-semibold hover:bg-green-700 dark:hover:bg-green-700 transition-colors duration-300 shadow-lg shadow-green-600/20 disabled:opacity-60"
+              disabled={!isValid || submitting}
+              aria-busy={submitting}
+              className="w-full sm:w-auto px-8 py-3 rounded-full text-sm font-semibold transition-colors duration-300 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{
+                backgroundColor: "var(--accent-green)",
+                color: "var(--surface)",
+                opacity: !isValid || submitting ? 0.55 : 1,
+                outlineColor: "var(--accent-green)",
+              }}
             >
-              {submitting ? "Submitting…" : "Submit Feedback"}
+              {submitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: "var(--surface)", borderTopColor: "transparent" }}
+                  />
+                  Submitting…
+                </span>
+              ) : (
+                "Submit Feedback"
+              )}
             </button>
             {submitError && (
-              <p className="mt-2 text-xs font-mono text-red-500 dark:text-red-400" role="alert">
+              <p className="mt-2 text-xs font-mono" role="alert" style={errorStyle}>
                 {submitError}
               </p>
             )}
-            <p className="mt-4 text-xs font-mono text-gray-300">
-              {"/* goes to review before appearing publicly */"}
+            <p
+              className="mt-4 text-xs"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              goes to review before appearing publicly
             </p>
           </div>
-        </motion.form>
+        </Reveal>
       </div>
-      <Footer />
+    </form>
+  );
+
+  return (
+    <main
+      className="relative min-h-screen flex items-center justify-center antialiased overflow-hidden"
+      style={{ backgroundColor: "var(--page-bg)" }}
+    >
+      {/* Soft page background treatment — subtle gradient + green
+          glow so the card reads as the clear focus. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 45% at 50% 42%, color-mix(in srgb, var(--accent-green) 9%, transparent), transparent 70%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
+        style={{
+          width: 500,
+          height: 500,
+          backgroundColor: "var(--accent-green)",
+          opacity: 0.07,
+        }}
+      />
+
+      {/* Mobile: card takes most of the viewport width with
+          comfortable side padding (px-6 = 24px each side). */}
+      <div className="relative z-10 w-full flex justify-center px-6 py-12">
+        {!expanded ? (
+          /* Phase 1 — the dot. Fades/scales in, pulses once
+             (~300ms), then morphs via the shared layoutId. */
+          <motion.div
+            layoutId="feedback-morph-card"
+            role="status"
+            aria-label="Loading feedback form"
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: [0, 1, 1.25, 1] }}
+            transition={{ duration: 0.7, times: [0, 0.4, 0.7, 1], ease: "easeOut" }}
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              backgroundColor: "var(--accent-green)",
+              boxShadow: "0 0 24px color-mix(in srgb, var(--accent-green) 55%, transparent)",
+            }}
+          />
+        ) : reduceMotion ? (
+          /* Reduced motion — skip the morph, fade the card in. */
+          <motion.div
+            role="region"
+            aria-label="Feedback form"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.25 }}
+            className="w-full p-6 sm:p-10"
+            style={{
+              maxWidth: 640,
+              borderRadius: 16,
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
+              boxShadow:
+                "0 4px 6px -1px rgb(0 0 0 / 0.06), 0 12px 32px -8px rgb(0 0 0 / 0.12)",
+            }}
+          >
+            {cardBody}
+          </motion.div>
+        ) : (
+          /* Phase 2 — the same element, morphed: 12px circle →
+             full card. Geometry via layoutId, surface + radius
+             via explicit animation on the same spring. */
+          <motion.div
+            layoutId="feedback-morph-card"
+            role="region"
+            aria-label="Feedback form"
+            initial={{
+              borderRadius: "50%",
+              backgroundColor: "var(--accent-green)",
+            }}
+            animate={{
+              borderRadius: 16,
+              backgroundColor: "var(--surface)",
+            }}
+            transition={MORPH_TRANSITION}
+            className="w-full p-6 sm:p-10"
+            style={{
+              maxWidth: 640,
+              border: "1px solid var(--border)",
+              boxShadow:
+                "0 4px 6px -1px rgb(0 0 0 / 0.06), 0 12px 32px -8px rgb(0 0 0 / 0.12)",
+            }}
+          >
+            {cardBody}
+          </motion.div>
+        )}
+      </div>
     </main>
   );
 }

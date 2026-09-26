@@ -6,6 +6,40 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
+/* ────────────────────────────────────────────
+   /feedback theme tokens (standalone private page).
+   Light values by default; dark values switch via
+   prefers-color-scheme to match the site's existing
+   dark variant (@custom-variant dark above).
+   The feedback page reads ONLY these vars (plus the
+   shared font tokens) — no hardcoded colors.
+   ──────────────────────────────────────────── */
+:root {
+  --surface: #ffffff;
+  --border: #bbf7d0;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --accent-green: #16a34a;
+  --page-bg: #f6fbf8;
+  --input-bg: #ffffff;
+  --warning: #d97706;
+  --error: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #030712;
+    --border: #14532d;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --accent-green: #4ade80;
+    --page-bg: #020617;
+    --input-bg: #0b1120;
+    --warning: #f59e0b;
+    --error: #f87171;
+  }
+}
+
 html,
 body {
   overflow-x: hidden;
