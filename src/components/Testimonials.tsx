@@ -14,7 +14,8 @@ import {
    Data comes from the shared backend (GET
    /api/testimonials/approved) — only entries Peter has
    approved are ever shown. If none exist yet the section
-   renders nothing. Read-only: overall rating only (the
+   renders an honest empty placeholder so it stays visible.
+   Read-only: overall rating only (the
    four category ratings stay private for Peter's review),
    recommend badge when applicable, no buttons/links/CTAs.
 
@@ -238,16 +239,154 @@ export default function Testimonials() {
     };
   }, []);
 
-  /* Dot presence, then morph to card — only once approved
-     data is available to display. */
+  /* Dot presence, then morph to card — runs for both the real
+     testimonial and the empty placeholder (which needs `loaded`
+     instead of `testimonial` so it still animates with no data). */
   useEffect(() => {
-    if (!inView || !testimonial || reduceMotion || expanded) return;
+    if (!inView || !loaded || reduceMotion || expanded) return;
     const t = setTimeout(() => setExpanded(true), EXPAND_DELAY_MS);
     return () => clearTimeout(t);
-  }, [inView, testimonial, reduceMotion, expanded]);
+  }, [inView, loaded, reduceMotion, expanded]);
 
-  /* Nothing approved (or fetch failed) → no section at all. */
-  if (loaded && !testimonial) return null;
+  /* Nothing approved (or fetch failed) → same dot-morphs-into-a-
+     card mechanic, but the card holds an honest empty placeholder
+     so the section stays visible between Projects and Contact. */
+  if (loaded && !testimonial) {
+    const showEmptyDot = inView && !reduceMotion && !expanded;
+    const showEmptyCard = reduceMotion || expanded;
+    return (
+      <section
+        ref={sectionRef}
+        aria-label="Client testimonial"
+        className="relative py-28 overflow-hidden"
+        style={{ backgroundColor: "var(--page-bg)" }}
+      >
+        <h2 className="sr-only">Client testimonial</h2>
+
+        {/* Faint spotlight glow (decorative). */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
+          style={{
+            width: 480,
+            height: 480,
+            backgroundColor: "var(--accent-green)",
+            opacity: 0.06,
+          }}
+        />
+
+        <div className="relative z-10 flex justify-center px-6">
+          {showEmptyDot && (
+            /* Phase 1 — the dot, same as the real card. */
+            <motion.div
+              layoutId="testimonial-morph-card"
+              aria-hidden="true"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: [0, 1, 1.25, 1] }}
+              transition={{
+                duration: 0.7,
+                times: [0, 0.4, 0.7, 1],
+                ease: "easeOut",
+              }}
+              style={{
+                willChange: "transform, border-radius, background-color",
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                backgroundColor: "var(--accent-green)",
+                boxShadow:
+                  "0 0 24px color-mix(in srgb, var(--accent-green) 55%, transparent)",
+              }}
+            />
+          )}
+
+          {showEmptyCard &&
+            (reduceMotion ? (
+              <motion.div
+                role="region"
+                aria-label="Client testimonial"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25 }}
+                className="w-full px-6 py-10 sm:px-12 text-center"
+                style={{
+                  maxWidth: 760,
+                  borderRadius: 16,
+                  backgroundColor: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  boxShadow: CARD_SHADOW,
+                }}
+              >
+                <p
+                  className="text-xs font-mono tracking-[0.3em] uppercase mb-3"
+                  style={{ color: "var(--accent-green)" }}
+                >
+                  Client testimonials
+                </p>
+                <p
+                  className="text-lg sm:text-xl font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Testimonials coming soon
+                </p>
+                <p
+                  className="mt-2 text-[15px] leading-relaxed"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Approved client feedback will appear here.
+                </p>
+              </motion.div>
+            ) : (
+              /* Phase 2 — same morph: 12px circle → full card. */
+              <motion.div
+                layoutId="testimonial-morph-card"
+                role="region"
+                aria-label="Client testimonial"
+                initial={{
+                  borderRadius: "50%",
+                  backgroundColor: "var(--accent-green)",
+                }}
+                animate={{
+                  borderRadius: 16,
+                  backgroundColor: "var(--surface)",
+                }}
+                transition={MORPH_TRANSITION}
+                className="w-full px-6 py-10 sm:px-12 text-center"
+                style={{
+                  willChange: "transform, border-radius, background-color",
+                  maxWidth: 760,
+                  border: "1px solid var(--border)",
+                  boxShadow: CARD_SHADOW,
+                }}
+              >
+                <Reveal delay={CONTENT_DELAY_S}>
+                  <p
+                    className="text-xs font-mono tracking-[0.3em] uppercase mb-3"
+                    style={{ color: "var(--accent-green)" }}
+                  >
+                    Client testimonials
+                  </p>
+                  <p
+                    className="text-lg sm:text-xl font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Testimonials coming soon
+                  </p>
+                </Reveal>
+                <Reveal delay={CONTENT_DELAY_S + 0.1}>
+                  <p
+                    className="mt-2 text-[15px] leading-relaxed"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Approved client feedback will appear here.
+                  </p>
+                </Reveal>
+              </motion.div>
+            ))}
+        </div>
+      </section>
+    );
+  }
 
   const showDot = inView && testimonial && !reduceMotion && !expanded;
   /* Narrowed once for the JSX below — non-null exactly when
