@@ -6,6 +6,7 @@ import {
   useReducedMotion,
 } from "framer-motion";
 import ScrollHint from "./components/ScrollHint";
+import Testimonials from "./components/Testimonials";
 import Footer, { socials } from "./components/Footer";
 
 /* ────────────────────────────────────────────
@@ -1242,6 +1243,7 @@ export default function App() {
       <About />
       <Skills />
       <Projects />
+      <Testimonials />
       <Contact />
       <Footer />
     </main>
