@@ -73,6 +73,12 @@ function getPool(): Pool {
           ? false
           : { rejectUnauthorized: false },
     });
+    // An idle-connection termination from the DB/pooler side emits
+    // "error" on the pool — without a listener that is an uncaught
+    // exception and crashes the whole serverless function.
+    globalThis.__portfolioPgPool.on("error", (err: unknown) => {
+      console.error("Unexpected pg pool error (idle client):", err);
+    });
   }
   return globalThis.__portfolioPgPool;
 }
