@@ -12,7 +12,7 @@ import {
   parseJsonBody,
   setSessionCookie,
   verifyPassword,
-} from "../../server/auth";
+} from "../../server/auth.js";
 
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));

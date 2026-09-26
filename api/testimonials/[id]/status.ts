@@ -2,14 +2,14 @@
    Body: { "status": "approved" | "rejected" } */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { updateTestimonialStatus } from "../../../server/db";
+import { updateTestimonialStatus } from "../../../server/db.js";
 import {
   isAdminRequest,
   methodNotAllowed,
   parseJsonBody,
   unauthorized,
-} from "../../../server/auth";
-import { validateStatus } from "../../../server/validation";
+} from "../../../server/auth.js";
+import { validateStatus } from "../../../server/validation.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;

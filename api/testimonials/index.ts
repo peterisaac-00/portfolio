@@ -5,7 +5,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   createTestimonial,
   listTestimonials,
-} from "../../server/db";
+} from "../../server/db.js";
 import {
   checkRateLimit,
   getClientIp,
@@ -13,8 +13,8 @@ import {
   methodNotAllowed,
   parseJsonBody,
   unauthorized,
-} from "../../server/auth";
-import { validateNewTestimonial } from "../../server/validation";
+} from "../../server/auth.js";
+import { validateNewTestimonial } from "../../server/validation.js";
 
 export default async function handler(
   req: VercelRequest,

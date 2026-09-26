@@ -17,7 +17,7 @@
 
 import { randomUUID } from "crypto";
 import { Pool, type QueryResult } from "pg";
-import type { TestimonialStatus, ValidTestimonialInput } from "./validation";
+import type { TestimonialStatus, ValidTestimonialInput } from "./validation.js";
 
 export interface DbTestimonial {
   id: string;

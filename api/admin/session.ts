@@ -8,7 +8,7 @@ import {
   clearSessionCookie,
   isAdminRequest,
   methodNotAllowed,
-} from "../../server/auth";
+} from "../../server/auth.js";
 
 export default async function handler(
   req: VercelRequest,

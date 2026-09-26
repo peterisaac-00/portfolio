@@ -3,8 +3,8 @@
    briefly at the edge; approvals take up to a minute to show. */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { listApprovedTestimonials } from "../../server/db";
-import { methodNotAllowed } from "../../server/auth";
+import { listApprovedTestimonials } from "../../server/db.js";
+import { methodNotAllowed } from "../../server/auth.js";
 
 export default async function handler(
   req: VercelRequest,
