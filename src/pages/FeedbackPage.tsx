@@ -899,9 +899,29 @@ export default function FeedbackPage() {
           comfortable side padding (px-6 = 24px each side). */}
       <div className="relative z-10 w-full flex flex-col items-center px-6 py-12">
         {/* Back navigation sits above the card so it never
-            interferes with the dot-morph layoutId animation. */}
-        <div className="w-full flex justify-start mb-6" style={{ maxWidth: 640 }}>
-          <BackToPortfolio />
+            interferes with the dot-morph layoutId animation.
+            The row reserves its height from first paint
+            (min-h) so the dot/card never shifts; the link
+            itself only mounts after `expanded` and fades in.
+            Conditional rendering keeps it unfocusable and
+            unclickable until visible. Reduced motion: static. */}
+        <div
+          className="w-full flex justify-start mb-6 min-h-[44px]"
+          style={{ maxWidth: 640 }}
+        >
+          {expanded ? (
+            reduceMotion ? (
+              <BackToPortfolio />
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
+              >
+                <BackToPortfolio />
+              </motion.div>
+            )
+          ) : null}
         </div>
         {!expanded ? (
           /* Phase 1 — the dot. Fades/scales in, pulses once
