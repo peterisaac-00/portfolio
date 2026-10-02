@@ -186,3 +186,12 @@ export async function updateTestimonialStatus(
   if (result.rows.length === 0) return null;
   return mapRow(result.rows[0]);
 }
+
+export async function deleteTestimonial(id: string): Promise<boolean> {
+  await ensureSchema();
+  const result = await getPool().query(
+    "DELETE FROM testimonials WHERE id = $1",
+    [id]
+  );
+  return (result.rowCount ?? 0) > 0;
+}

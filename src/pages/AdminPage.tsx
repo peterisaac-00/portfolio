@@ -6,6 +6,7 @@ import {
   adminLogin,
   adminLogout,
   checkAdminSession,
+  deleteTestimonial,
   fetchTestimonials,
   formatDate,
   updateTestimonialStatus,
@@ -99,7 +100,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("pending");
   const [confirm, setConfirm] = useState<{
     id: string;
-    action: "reject";
+    action: "reject" | "delete";
   } | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -256,6 +257,29 @@ export default function AdminPage() {
         await load();
       } else {
         setActionError("Couldn't save that change. Please try again.");
+      }
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const runDelete = async (id: string) => {
+    setActionId(id);
+    setActionError(null);
+    try {
+      // Server verifies the admin session cookie before deleting.
+      await deleteTestimonial(id);
+      setItems((prev) => prev.filter((t) => t.id !== id));
+      setConfirm(null);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setAuthed(false);
+        setItems([]);
+      } else if (err instanceof ApiError && err.status === 404) {
+        setActionError("That testimonial was already deleted. Reloading…");
+        await load();
+      } else {
+        setActionError("Couldn't delete that testimonial. Please try again.");
       }
     } finally {
       setActionId(null);
@@ -551,6 +575,16 @@ export default function AdminPage() {
                       >
                         Reject
                       </button>
+                      <button
+                        disabled={isActing}
+                        aria-label={`Delete feedback from ${t.name}`}
+                        onClick={() =>
+                          setConfirm({ id: t.id, action: "delete" })
+                        }
+                        className="px-5 py-2.5 rounded-full border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-300 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
                     </div>
                   )}
 
@@ -563,22 +597,62 @@ export default function AdminPage() {
                       >
                         {isActing ? "Working…" : "Unpublish"}
                       </button>
+                      <button
+                        disabled={isActing}
+                        aria-label={`Delete feedback from ${t.name}`}
+                        onClick={() =>
+                          setConfirm({ id: t.id, action: "delete" })
+                        }
+                        className="px-5 py-2.5 rounded-full border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-300 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
                     </div>
                   )}
 
                   {t.status === "rejected" && !isConfirming && tab === "rejected" && (
-                    <p className="text-xs font-mono text-gray-300">
-                      {"// rejected — hidden from the public portfolio"}
-                    </p>
+                    <div className="space-y-3">
+                      <p className="text-xs font-mono text-gray-300">
+                        {"// rejected — hidden from the public portfolio"}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          disabled={isActing}
+                          aria-label={`Delete feedback from ${t.name}`}
+                          onClick={() =>
+                            setConfirm({ id: t.id, action: "delete" })
+                          }
+                          className="px-5 py-2.5 rounded-full border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-300 disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
                   )}
 
                   {/* Inline confirmation (small, not a big modal) */}
                   {isConfirming && confirm && (
-                    <div className="mt-1 p-4 rounded-xl bg-green-50/60 dark:bg-gray-900 border border-green-100 dark:border-green-900">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium mb-3">
+                    <div
+                      role="alertdialog"
+                      aria-label={
+                        confirm.action === "delete"
+                          ? `Confirm deletion of feedback from ${t.name}`
+                          : "Confirm rejection"
+                      }
+                      className="mt-1 p-4 rounded-xl bg-green-50/60 dark:bg-gray-900 border border-green-100 dark:border-green-900"
+                    >
+                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium mb-1">
                         {confirm.action === "reject" &&
                           "Reject this testimonial?"}
+                        {confirm.action === "delete" &&
+                          `Delete feedback from ${t.name}?`}
                       </p>
+                      {confirm.action === "delete" && (
+                        <p className="text-xs font-mono text-gray-400 mb-3">
+                          This cannot be undone.
+                        </p>
+                      )}
+                      {confirm.action === "reject" && <div className="mb-3" />}
                       <div className="flex flex-wrap gap-3">
                         <button
                           onClick={() => setConfirm(null)}
@@ -594,6 +668,17 @@ export default function AdminPage() {
                             className="px-5 py-2 rounded-full bg-gray-900 dark:bg-gray-700 text-white text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors duration-300 disabled:opacity-50"
                           >
                             {isActing ? "Rejecting…" : "Reject"}
+                          </button>
+                        )}
+                        {confirm.action === "delete" && (
+                          <button
+                            aria-label={`Confirm delete feedback from ${t.name}`}
+                            onClick={() => void runDelete(t.id)}
+                            disabled={isActing}
+                            aria-busy={isActing}
+                            className="px-5 py-2 rounded-full bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors duration-300 disabled:opacity-50"
+                          >
+                            {isActing ? "Deleting…" : "Delete"}
                           </button>
                         )}
                       </div>

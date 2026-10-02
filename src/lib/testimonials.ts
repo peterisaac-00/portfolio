@@ -130,6 +130,21 @@ export function updateTestimonialStatus(
   );
 }
 
+/**
+ * Admin delete — permanently removes the testimonial.
+ * Authorization is enforced server-side via the session
+ * cookie; the browser only forwards the request.
+ */
+export function deleteTestimonial(id: string): Promise<{ ok: boolean; id: string }> {
+  return request<{ ok: boolean; id: string }>(
+    "/api/testimonials/" + encodeURIComponent(id),
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+}
+
 /** Public read — only approved testimonials. Used by the
     main site's Testimonials section. */
 export function fetchApprovedTestimonials(): Promise<Testimonial[]> {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { submitTestimonial } from "../lib/testimonials";
 
 /* ────────────────────────────────────────────
@@ -81,6 +81,81 @@ function Reveal({
     >
       {children}
     </motion.div>
+  );
+}
+
+/* ────────────────────────────────────────────
+   BackToPortfolio — visible link back to the main site.
+   The project uses a minimal pathname router (see
+   main.tsx: plain <a href> navigation, no react-router),
+   so a declarative anchor matches the existing Admin
+   "Back to portfolio" pattern without adding deps.
+   Semantic <a>, keyboard operable, visible focus ring,
+   arrow flips in RTL via rtl:rotate-180.
+   ──────────────────────────────────────────── */
+function BackToPortfolio({ variant = "subtle" }: { variant?: "subtle" | "primary" }) {
+  if (variant === "primary") {
+    return (
+      <a
+        href="/"
+        aria-label="Back to portfolio"
+        className="inline-flex min-h-[44px] items-center justify-center gap-2 px-8 py-3 rounded-full text-sm font-semibold transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+        style={{
+          backgroundColor: "var(--accent-green)",
+          color: "var(--surface)",
+          outlineColor: "var(--accent-green)",
+        }}
+      >
+        <svg
+          aria-hidden="true"
+          className="h-4 w-4 rtl:rotate-180"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
+        </svg>
+        Back to Portfolio
+      </a>
+    );
+  }
+  return (
+    <a
+      href="/"
+      aria-label="Back to portfolio"
+      className="inline-flex min-h-[44px] items-center gap-2 px-2 py-2 text-xs font-mono tracking-widest uppercase transition-colors duration-300 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={{
+        color: "var(--text-secondary)",
+        outlineColor: "var(--accent-green)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = "var(--accent-green)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = "var(--text-secondary)";
+      }}
+    >
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4 rtl:rotate-180"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M10 19l-7-7m0 0l7-7m-7 7h18"
+        />
+      </svg>
+      Back to portfolio
+    </a>
   );
 }
 
@@ -441,6 +516,11 @@ export default function FeedbackPage() {
         >
           Your feedback goes to review before appearing publicly.
         </p>
+      </Reveal>
+      <Reveal delay={reduceMotion ? 0 : 0.4}>
+        <div className="mt-8 flex justify-center">
+          <BackToPortfolio variant="primary" />
+        </div>
       </Reveal>
     </div>
   ) : (
@@ -817,7 +897,12 @@ export default function FeedbackPage() {
 
       {/* Mobile: card takes most of the viewport width with
           comfortable side padding (px-6 = 24px each side). */}
-      <div className="relative z-10 w-full flex justify-center px-6 py-12">
+      <div className="relative z-10 w-full flex flex-col items-center px-6 py-12">
+        {/* Back navigation sits above the card so it never
+            interferes with the dot-morph layoutId animation. */}
+        <div className="w-full flex justify-start mb-6" style={{ maxWidth: 640 }}>
+          <BackToPortfolio />
+        </div>
         {!expanded ? (
           /* Phase 1 — the dot. Fades/scales in, pulses once
              (~300ms), then morphs via the shared layoutId. */
@@ -841,7 +926,7 @@ export default function FeedbackPage() {
           /* Reduced motion — skip the morph, fade the card in. */
           <motion.div
             role="region"
-            aria-label="Feedback form"
+            aria-label={submitted ? "Feedback submitted" : "Feedback form"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.25 }}
@@ -864,7 +949,7 @@ export default function FeedbackPage() {
           <motion.div
             layoutId="feedback-morph-card"
             role="region"
-            aria-label="Feedback form"
+            aria-label={submitted ? "Feedback submitted" : "Feedback form"}
             initial={{
               borderRadius: "50%",
               backgroundColor: "var(--accent-green)",
@@ -883,7 +968,22 @@ export default function FeedbackPage() {
                 "0 4px 6px -1px rgb(0 0 0 / 0.06), 0 12px 32px -8px rgb(0 0 0 / 0.12)",
             }}
           >
-            {cardBody}
+            {/* Form ↔ thank-you swap: keyed + AnimatePresence
+                mode="wait" so the form exits before the success
+                enters. Without this the ternary unmounted the form
+                instantly and the success mount animation was cut
+                off (thank-you never appeared animated). */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={submitted ? "feedback-success" : "feedback-form"}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                {cardBody}
+              </motion.div>
+            </AnimatePresence>
           </motion.div>
         )}
       </div>
