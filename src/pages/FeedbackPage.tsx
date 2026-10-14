@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { submitTestimonial } from "../lib/testimonials";
+import { ApiError, submitTestimonial } from "../lib/testimonials";
 
 /* ────────────────────────────────────────────
    /feedback — private, unlisted client feedback page.
@@ -443,8 +443,12 @@ export default function FeedbackPage() {
           message: message.trim(),
         });
         setSubmitted(true);
-      } catch {
-        setSubmitError("Couldn't submit your feedback. Please try again.");
+      } catch (err) {
+        setSubmitError(
+          err instanceof ApiError && err.message
+            ? err.message
+            : "Couldn't submit your feedback. Please try again."
+        );
       } finally {
         setSubmitting(false);
       }
