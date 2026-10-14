@@ -1,9 +1,9 @@
 /* ────────────────────────────────────────────
    Postgres data access for testimonials.
-   Reads POSTGRES_URL from the environment (set as a Vercel
-   environment variable — never committed, never exposed to
-   the client bundle). Works with Supabase Postgres or
-   Vercel Postgres connection strings alike.
+   Reads the active PostgreSQL connection string from the
+   environment. Neon integrations can expose a project-prefixed
+   variable such as test_POSTGRES_URL, while manual setups use
+   POSTGRES_URL or DATABASE_URL.
 
    Serverless notes:
    - The pool is cached on globalThis so warm invocations
@@ -59,9 +59,20 @@ declare global {
 
 function getPool(): Pool {
   if (!globalThis.__portfolioPgPool) {
-    const connectionString = process.env.POSTGRES_URL;
+    // Vercel can retain a stale unprefixed POSTGRES_URL after a
+    // Neon database is recreated. Prefer the active integration
+    // variable so deleted tenants are never selected again.
+    const connectionString =
+      process.env.test_POSTGRES_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.POSTGRES_PRISMA_URL ||
+      process.env.DATABASE_URL ||
+      process.env.test_DATABASE_URL ||
+      process.env.test_POSTGRES_PRISMA_URL;
     if (!connectionString) {
-      throw new Error("POSTGRES_URL is not configured.");
+      throw new Error(
+        "No PostgreSQL connection string is configured. Set POSTGRES_URL or connect a Neon database."
+      );
     }
     globalThis.__portfolioPgPool = new Pool({
       connectionString,
