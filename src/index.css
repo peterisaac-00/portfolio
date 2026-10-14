@@ -15,6 +15,11 @@
    shared font tokens) — no hardcoded colors.
    ──────────────────────────────────────────── */
 :root {
+  /* ── Project "Coming Soon" lock — fine-tune here ── */
+  --lock-blur: 2.5px;
+  --lock-opacity: 0.75;
+  --lock-overlay-blur: 1.5px;
+  --lock-overlay-bg: rgba(10, 25, 20, 0.15);
   --surface: #ffffff;
   --border: #bbf7d0;
   --text-primary: #111827;
@@ -79,6 +84,41 @@ html {
 
 .cursor-blink {
   animation: cursor-blink 1s ease-in-out infinite;
+}
+
+/* ────────────────────────────────────────────
+   Locked project "coming_soon" terminal chip.
+   Small glass chip in the site's dark-green
+   terminal theme — only the cursor blinks.
+   ──────────────────────────────────────────── */
+.coming-soon-chip {
+  width: fit-content;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--accent-green);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-green) 50%, transparent);
+  background: rgba(10, 25, 20, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid color-mix(in srgb, var(--accent-green) 35%, transparent);
+  border-radius: 8px;
+}
+
+.coming-soon-cursor {
+  animation: coming-soon-blink 1s step-end infinite;
+}
+
+@keyframes coming-soon-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coming-soon-cursor {
+    animation: none;
+  }
 }
 
 @keyframes gradient-shift {

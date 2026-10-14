@@ -955,6 +955,13 @@ const projects: Project[] = [
 ];
 
 /* ────────────────────────────────────────────
+   TEMPORARY LOCK — set to false to restore
+   interactive project cards. Single switch:
+   no other code changes needed.
+   ──────────────────────────────────────────── */
+const SHOW_COMING_SOON = true;
+
+/* ────────────────────────────────────────────
    PROJECT DETAIL MODAL
    Covers 75% of the screen. Shows full project
    details, images, GitHub & demo links.
@@ -1184,15 +1191,43 @@ function Projects() {
             {projects.map((p, i) => (
 <motion.article
                   key={p.name}
-                  className="group relative p-5 pb-6 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.07] hover:bg-white/[0.08] hover:border-green-400/20 transition-[background-color,border-color] duration-500 cursor-pointer"
-                 initial={{ opacity: 0, y: 30 }}
-                 animate={inView ? { opacity: 1, y: 0 } : {}}
-                 transition={{ duration: 0.6, delay: i * 0.12 }}
-                 whileHover={{ y: -6, transition: { duration: 0.25 } }}
-                 onClick={() => setSelected(p)}
-               >
-                 <div className="flex gap-4">
-                   {/* Project image */}
+                  className={
+                    SHOW_COMING_SOON
+                      ? "group relative overflow-hidden p-5 pb-6 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.07] transition-[background-color,border-color] duration-500 cursor-default pointer-events-none select-none"
+                      : "group relative p-5 pb-6 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.07] hover:bg-white/[0.08] hover:border-green-400/20 transition-[background-color,border-color] duration-500 cursor-pointer"
+                  }
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={inView ? { opacity: 1, y: 0 } : {}}
+                  transition={{ duration: 0.6, delay: i * 0.12 }}
+                  whileHover={
+                    SHOW_COMING_SOON
+                      ? undefined
+                      : { y: -6, transition: { duration: 0.25 } }
+                  }
+                  onClick={
+                    SHOW_COMING_SOON ? undefined : () => setSelected(p)
+                  }
+                  aria-disabled={SHOW_COMING_SOON || undefined}
+                  tabIndex={SHOW_COMING_SOON ? -1 : undefined}
+                >
+                  <div
+                    className="flex gap-4"
+                    aria-hidden={SHOW_COMING_SOON ? true : undefined}
+                    style={
+                      SHOW_COMING_SOON
+                        ? {
+                            filter: "blur(var(--lock-blur, 2.5px))",
+                            opacity: "var(--lock-opacity, 0.75)",
+                            userSelect: "none",
+                            pointerEvents: "none",
+                          }
+                        : undefined
+                    }
+                  >
+                   {/* Project image — softer treatment than the text so
+                       colors/shapes stay recognizable under the same
+                       parent blur (images survive light blur better;
+                       saturate/contrast pops it slightly forward). */}
                     <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-white/[0.06]">
                       <img
                         src={p.image}
@@ -1202,6 +1237,14 @@ function Projects() {
                         width={112}
                         height={112}
                         className="w-full h-full object-cover aspect-square group-hover:scale-105 transition-transform duration-500"
+                        style={
+                          SHOW_COMING_SOON
+                            ? {
+                                filter:
+                                  "saturate(1.2) contrast(1.05) brightness(1.05)",
+                              }
+                            : undefined
+                        }
                       />
                     </div>
 
@@ -1232,8 +1275,29 @@ function Projects() {
                    </div>
                  </div>
 
-                 {/* Click hint — always visible; transparency comes from text-green-400/40 */}
-              </motion.article>
+                  {/* Click hint — always visible; transparency comes from text-green-400/40 */}
+                  {SHOW_COMING_SOON && (
+                    <div
+                      className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl pointer-events-none"
+                      style={{
+                        backdropFilter: "blur(var(--lock-overlay-blur, 1.5px))",
+                        WebkitBackdropFilter:
+                          "blur(var(--lock-overlay-blur, 1.5px))",
+                        background: "var(--lock-overlay-bg, rgba(10, 25, 20, 0.15))",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <span
+                        role="status"
+                        aria-label="Coming soon"
+                        className="coming-soon-chip font-mono"
+                      >
+                        <span aria-hidden="true">&gt; coming_soon</span>
+                        <span aria-hidden="true" className="coming-soon-cursor">_</span>
+                      </span>
+                    </div>
+                  )}
+                </motion.article>
             ))}
           </div>
         </div>
